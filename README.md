@@ -22,12 +22,28 @@ Aplicación Android nativa desarrollada en **Java puro** con arquitectura **MVVM
 
 > **Descarga directa (sin cuenta de GitHub):**
 >
-> ### 👉 [**Descargar CitasMedicas-v1.0.apk**](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v1.0/CitasMedicas-v1.0.apk)
+> ### 👉 [**Descargar CitasMedicas-v1.1.apk**](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v1.1/CitasMedicas-v1.1.apk)
+
+> ✅ **v1.1 — Corrección importante:** se arregló el botón *"Confirmar cita"*, que antes no mostraba confirmación. Ahora, al seleccionar día y horario y pulsar confirmar, la cita se guarda y se muestra el mensaje **"¡Cita agendada correctamente!"**.
 
 También disponible el App Bundle para Play Store:
-👉 [CitasMedicas-v1.0.aab](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v1.0/CitasMedicas-v1.0.aab)
+👉 [CitasMedicas-v1.1.aab](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v1.1/CitasMedicas-v1.1.aab)
 
-Página de la versión: **[Releases v1.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v1.0)**
+Página de la versión: **[Releases v1.1](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v1.1)** · *(versión anterior: [v1.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v1.0))*
+
+---
+
+## 📩 Mensaje para el profesor / quién quiera probar la app
+
+```
+Proyecto "Sistema de Citas Médicas" (Android nativo, Java + MVVM)
+
+Código fuente: https://github.com/aliamas021806-stack/citas_medicas
+APK para probar: https://github.com/aliamas021806-stack/citas_medicas/releases/download/v1.1/CitasMedicas-v1.1.apk
+
+Instrucciones: descargar el APK en el teléfono, abrirlo y aceptar
+"instalar apps de origen desconocido" si lo pide. Requiere Android 7.0+.
+```
 
 ---
 
