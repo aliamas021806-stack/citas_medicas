@@ -1,5 +1,9 @@
 name: Android CI
 
+# Compila la APK de release (firmada con la keystore de debug) y el App Bundle.
+# NOTA: NO se usa android-actions/setup-android porque en los runners actuales
+# intenta instalar el paquete obsoleto 'tools' y falla. Los runners ubuntu-latest
+# ya incluyen el Android SDK preinstalado y pre-licenciado.
 
 on:
   push:
@@ -26,13 +30,17 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.7'
+      - name: Accept Android SDK licenses and install packages
+        run: |
+          SDKMANAGER="${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "${ANDROID_SDK_ROOT}" -name sdkmanager -type f | head -n 1)
+          fi
+          if [ -n "$SDKMANAGER" ] && [ -x "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0" > /dev/null 2>&1 || true
+          fi
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}"
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
