@@ -1,3 +1,17 @@
+
+Alissa Milagro Alvarado Suárez: Gestión del repositorio en GitHub, control de versiones, fusiones de código (merges) y despliegue.
+
+Alejandra Constanza Cabeza Molina: Diseño y optimización del prompt, además del análisis funcional y experto sobre el flujo de las historias médicas.
+
+Joel Renato Caro Saldaña: Desarrollo de api y construcción de la lógica de programación principal del sistema.
+
+Jesus Abdel Gonzales Quintanilla: Diseño, estructuración y  esquemas de almacenamiento de la información.
+
+Erick Limber Mozombite Perez: Desarrollo del Frontend e implementación visual de la interfaz de usuario.
+
+Yuli Estefani Rimarachin Ortiz: Documentación técnica del proyecto, redacción de manuales de usuario y estructuración de informes de entrega.
+
+
 # 🩺 Citas Médicas — Sistema de Citas Médicas (Android / Java)
 
 Aplicación Android nativa desarrollada en **Java puro** con arquitectura **MVVM**, **API Mock local** y persistencia con **Room (SQLite)**. No requiere backend real: funciona 100% offline.
