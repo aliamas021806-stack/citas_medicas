@@ -46,19 +46,19 @@ Cada vez que se sube código, GitHub genera un APK listo para instalar.
 
 1. Entra a tu repositorio en **GitHub**.
 2. Haz clic en la pestaña **`Actions`** (barra superior).
-3. En la lista de la izquierda verás el workflow **`Build APK`**.
+3. En la lista de la izquierda elige **`Android CI`** (el workflow `Build Release APK & AAB`).
    - 🟡 **Amarillo** = está compilando (espera ~3-5 min).
    - ✅ **Verde** = terminó bien, el APK está listo.
    - ❌ **Rojo** = hubo un error (abre el log para verlo).
 4. Haz clic en la **ejecución con ✅ verde** (la más reciente, arriba).
 5. Baja hasta la sección **`Artifacts`** al final de la página.
 6. Descarga:
-   - **`citasmedicas-release-apk`** → contiene **`app-release.apk`** (el instalable).
-   - **`citasmedicas-release-aab`** → contiene el bundle para Google Play.
+   - **`app-release-apk`** → contiene **`app-release.apk`** (el instalable).
+   - **`app-release-aab`** → contiene el bundle para Google Play.
 7. **Descomprime** el archivo descargado (GitHub entrega los artifacts en `.zip`).
 
-> 💡 Atajo: también puedes ir a **Releases** o usar la ejecución manual desde
-> `Actions` → `Build APK` → botón **`Run workflow`**.
+> 💡 Atajo: también puedes lanzarlo a mano desde
+> `Actions` → `Android CI` → botón **`Run workflow`**.
 
 ---
 
@@ -220,7 +220,6 @@ Asegúrate de que **`gradle/wrapper/gradle-wrapper.jar`** se subió **íntegro**
 binario). El archivo **`.gitattributes`** del repositorio existe precisamente para
 protegerlo. **Nunca** edites ese JAR ni lo subas arrastrando archivos por la web de
 GitHub; usa `git push` o Android Studio.
-
 ### "Aplicación no instalada" en el teléfono
 Desinstala la versión previa (conflicto de firmas) e instala el APK nuevo. Ver
 [Instalación en el teléfono](#-instalación-en-el-teléfono).
