@@ -1,3 +1,17 @@
+
+Alissa Milagro Alvarado Suárez: Gestión de GitHub, control de versiones y administración del repositorio.
+
+Alejandra Constanza Cabeza Molina: Creación y diseño del prompt, aportando su conocimiento especializado sobre el manejo y estructura de historias médicas.
+
+Erick Limber Mozombite Perez:  Búsqueda de información de apoyo, verificación lógica y testeo del código.
+
+Joel Renato Caro Saldaña: Búsqueda de información, verificación y testeo del código.
+
+Jesus Abdel Gonzales Quintanilla: Búsqueda de información, verificación y testeo del código.
+
+Yuli Estefani Rimarachin Ortiz: Búsqueda de información, verificación y testeo del código.
+
+
 # 🩺 Sistema de Citas Médicas
 
 Aplicación Android **nativa en Java** para gestionar citas médicas, construida con
