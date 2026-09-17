@@ -58,6 +58,10 @@ public class DoctorDetailActivity extends AppCompatActivity {
     private TextInputEditText etReason;
     private ProgressBar progressBar;
     private TextView tvDoctorAge;
+    private com.google.android.material.button.MaterialButton btnConfirm;
+
+    /** Evita crear la cita dos veces si el usuario toca varias veces el botón. */
+    private boolean isSubmitting = false;
 
     /** Edad del paciente resuelta: primero desde la API, con respaldo en la sesión. */
     private int patientAge;
@@ -101,6 +105,7 @@ public class DoctorDetailActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
 
         findViewById(R.id.btnConfirm).setOnClickListener(v -> onConfirmClicked());
+        btnConfirm = findViewById(R.id.btnConfirm);
     }
 
     private void bindDoctor() {
@@ -137,8 +142,11 @@ public class DoctorDetailActivity extends AppCompatActivity {
         patientViewModel.getPatient().observe(this, this::renderPatient);
 
         appointmentViewModel.getActionState().observe(this, this::renderAction);
-        appointmentViewModel.getNavigateBack().observe(this, v -> {
-            if (v != null) {
+        appointmentViewModel.getNavigateBack().observe(this, created -> {
+            if (Boolean.TRUE.equals(created)) {
+                // Consumimos el evento para que no se vuelva a disparar al rotar la pantalla
+                appointmentViewModel.clearNavigateBack();
+                progressBar.setVisibility(View.GONE);
                 Toast.makeText(this, R.string.appointment_confirmed, Toast.LENGTH_LONG).show();
                 setResult(RESULT_OK);
                 finish();
@@ -209,8 +217,16 @@ public class DoctorDetailActivity extends AppCompatActivity {
         }
         if (resource.status == Resource.Status.LOADING) {
             progressBar.setVisibility(View.VISIBLE);
+            setConfirmEnabled(false);
+        } else if (resource.status == Resource.Status.SUCCESS) {
+            // La inserción en Room terminó bien: dejamos de mostrar el spinner.
+            // El cierre de pantalla lo maneja el evento navigateBack.
+            progressBar.setVisibility(View.GONE);
+            setConfirmEnabled(true);
         } else if (resource.status == Resource.Status.ERROR) {
             progressBar.setVisibility(View.GONE);
+            setConfirmEnabled(true);
+            isSubmitting = false;
             if (resource.message != null) {
                 Toast.makeText(this, resource.message, Toast.LENGTH_SHORT).show();
             }
@@ -218,12 +234,25 @@ public class DoctorDetailActivity extends AppCompatActivity {
         }
     }
 
+    private void setConfirmEnabled(boolean enabled) {
+        if (btnConfirm != null) {
+            btnConfirm.setEnabled(enabled);
+        }
+    }
+
     private void onConfirmClicked() {
+        if (isSubmitting) {
+            return;
+        }
+
         TimeSlot selectedSlot = slotAdapter.getSelectedSlot();
         if (selectedSlot == null) {
             Toast.makeText(this, R.string.select_time, Toast.LENGTH_SHORT).show();
             return;
         }
+
+        isSubmitting = true;
+        setConfirmEnabled(false);
 
         String reason = etReason.getText() != null ? etReason.getText().toString().trim() : "";
 

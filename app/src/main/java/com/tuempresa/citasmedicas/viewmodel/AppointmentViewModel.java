@@ -24,7 +24,12 @@ public class AppointmentViewModel extends AndroidViewModel {
 
     private final LiveData<List<AppointmentEntity>> appointments;
     private final MutableLiveData<Resource<Void>> actionState = new MutableLiveData<>();
-    private final MutableLiveData<Void> navigateBack = new MutableLiveData<>();
+    /**
+     * Evento de un solo disparo que indica que la cita se creó correctamente.
+     * Se usa Boolean (no Void) porque un LiveData<Void> emite siempre {@code null}
+     * y un observador con {@code if (value != null)} nunca se activaría.
+     */
+    private final MutableLiveData<Boolean> navigateBack = new MutableLiveData<>();
 
     public AppointmentViewModel(@NonNull Application application) {
         super(application);
@@ -40,7 +45,7 @@ public class AppointmentViewModel extends AndroidViewModel {
         return actionState;
     }
 
-    public LiveData<Void> getNavigateBack() {
+    public LiveData<Boolean> getNavigateBack() {
         return navigateBack;
     }
 
@@ -50,7 +55,8 @@ public class AppointmentViewModel extends AndroidViewModel {
             @Override
             public void onSuccess(Long data) {
                 actionState.setValue(Resource.success(null));
-                navigateBack.setValue(null);
+                // true = éxito de creación (evento observable por la Activity)
+                navigateBack.setValue(Boolean.TRUE);
             }
 
             @Override
@@ -77,5 +83,10 @@ public class AppointmentViewModel extends AndroidViewModel {
 
     public void clearActionState() {
         actionState.setValue(null);
+    }
+
+    /** Consume el evento de navegación para evitar que se repita (p. ej. al rotar). */
+    public void clearNavigateBack() {
+        navigateBack.setValue(Boolean.FALSE);
     }
 }
