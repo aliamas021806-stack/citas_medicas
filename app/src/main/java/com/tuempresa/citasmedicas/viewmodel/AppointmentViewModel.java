@@ -1,0 +1,81 @@
+package com.tuempresa.citasmedicas.viewmodel;
+
+import android.app.Application;
+
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+
+import com.tuempresa.citasmedicas.data.local.AppointmentEntity;
+import com.tuempresa.citasmedicas.data.repository.AppointmentRepository;
+import com.tuempresa.citasmedicas.data.repository.RepositoryCallback;
+import com.tuempresa.citasmedicas.model.Appointment;
+import com.tuempresa.citasmedicas.util.Resource;
+
+import java.util.List;
+
+/**
+ * ViewModel de citas médicas. Observa Room (SQLite) y gestiona crear/cancelar.
+ */
+public class AppointmentViewModel extends AndroidViewModel {
+
+    private final AppointmentRepository repository;
+
+    private final LiveData<List<AppointmentEntity>> appointments;
+    private final MutableLiveData<Resource<Void>> actionState = new MutableLiveData<>();
+    private final MutableLiveData<Void> navigateBack = new MutableLiveData<>();
+
+    public AppointmentViewModel(@NonNull Application application) {
+        super(application);
+        repository = new AppointmentRepository(application);
+        appointments = repository.observeAll();
+    }
+
+    public LiveData<List<AppointmentEntity>> getAppointments() {
+        return appointments;
+    }
+
+    public LiveData<Resource<Void>> getActionState() {
+        return actionState;
+    }
+
+    public LiveData<Void> getNavigateBack() {
+        return navigateBack;
+    }
+
+    public void createAppointment(Appointment appointment) {
+        actionState.setValue(Resource.loading());
+        repository.create(appointment, new RepositoryCallback<Long>() {
+            @Override
+            public void onSuccess(Long data) {
+                actionState.setValue(Resource.success(null));
+                navigateBack.setValue(null);
+            }
+
+            @Override
+            public void onError(String message) {
+                actionState.setValue(Resource.error(message));
+            }
+        });
+    }
+
+    public void cancelAppointment(long appointmentId) {
+        actionState.setValue(Resource.loading());
+        repository.cancel(appointmentId, new RepositoryCallback<Void>() {
+            @Override
+            public void onSuccess(Void data) {
+                actionState.setValue(Resource.success(null));
+            }
+
+            @Override
+            public void onError(String message) {
+                actionState.setValue(Resource.error(message));
+            }
+        });
+    }
+
+    public void clearActionState() {
+        actionState.setValue(null);
+    }
+}
