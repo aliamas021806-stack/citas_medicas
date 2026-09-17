@@ -43,9 +43,15 @@ workspace.xml
 tasks.xml
 
 # Keystore files
-*.jks
-*.keystore
-key.properties
+#
+# IMPORTANTE: En este proyecto de ejemplo la keystore de RELEASE y
+# key.properties SI se incluyen en el repositorio para que GitHub Actions
+# pueda firmar y generar un APK instalable sin configurar secretos.
+# Para produccion real, comenta/activa las lineas siguientes y usa Secretos.
+#
+# *.jks
+# *.keystore
+# key.properties
 
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
@@ -66,4 +72,3 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
-.github/

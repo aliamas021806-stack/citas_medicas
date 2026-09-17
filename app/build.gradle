@@ -2,6 +2,19 @@ plugins {
     id 'com.android.application'
 }
 
+// -----------------------------------------------------------------------------
+// Configuracion de firma.
+// Lee key.properties (raiz del proyecto). Si no existe, cae de vuelta a la
+// keystore de debug para que la compilacion NUNCA falle.
+// -----------------------------------------------------------------------------
+def keystorePropertiesFile = rootProject.file("key.properties")
+def keystoreProperties = new Properties()
+def hasReleaseSigning = false
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    hasReleaseSigning = keystoreProperties['storeFile'] != null
+}
+
 android {
     namespace 'com.tuempresa.citasmedicas'
     compileSdk 34
@@ -11,9 +24,30 @@ android {
         minSdk 24
         targetSdk 34
         versionCode 2
-        versionName "1.1"
+        versionName "2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+            // Habilita los TRES esquemas de firma para maxima compatibilidad de
+            // instalacion (v1 JAR + v2 + v3). Sin v1, algunos instaladores y
+            // navegadores rechazan el APK con "Aplicacion no instalada".
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+        }
+        debug {
+            enableV1Signing true
+            enableV2Signing true
+        }
     }
 
     buildTypes {
@@ -21,20 +55,26 @@ android {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // Firmamos el release con la keystore de debug (auto-generada por AGP)
-            // para que el APK de GitHub Actions sea instalable sin configurar secretos.
+            // Firmamos el RELEASE con la keystore de release propia (instalable y
+            // estable entre builds). Si no se encontro key.properties, usamos la
+            // keystore de debug para no romper la compilacion en CI.
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
+        }
+        debug {
             signingConfig signingConfigs.debug
         }
+    }
+
+    // El plugin de AGP 8.x genera APKs con zipalign/APK Signature Scheme v2/v3.
+    // La firma v1 tambien se habilita por compatibilidad con Android < 7.
+    buildFeatures {
+        viewBinding true
     }
 
     // Compatible con JDK 21: compilamos bytecode para Java 17 (soportado por Android)
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-    }
-
-    buildFeatures {
-        viewBinding true
     }
 
     packaging {
