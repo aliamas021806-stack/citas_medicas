@@ -23,21 +23,6 @@ local con **Room (SQLite)**.
 
 ---
 
-## 📋 Tabla de contenido
-
-1. [Características](#-características)
-2. [Descargar el APK desde GitHub](#-descargar-el-apk-desde-github-actions)
-3. [Instalación en el teléfono](#-instalación-en-el-teléfono)
-4. [Arquitectura](#-arquitectura-mvvm)
-5. [Estructura del proyecto](#-estructura-del-proyecto)
-6. [API simulada (Mock)](#-api-simulada-mock)
-7. [Abrir y compilar en Android Studio](#-abrir-y-compilar-en-android-studio)
-8. [Compilar por terminal](#-compilar-por-terminal)
-9. [Tecnologías y versiones](#-tecnologías-y-versiones)
-10. [Solución de problemas](#-solución-de-problemas)
-
----
-
 ## ✨ Características
 
 - 🔐 **Login / Registro simulado** con validación y campo de **edad**.
@@ -49,52 +34,10 @@ local con **Room (SQLite)**.
 - 🎂 **Edad del PACIENTE** presente en la API y visible en la app (datos generados por IA).
 - 📶 **100% offline**: la "API" responde localmente mediante un interceptor de red.
 
----
+- LINK DE DESCARGA
 
-## ⬇️ Descargar el APK desde GitHub Actions
-
-El proyecto **compila el APK automáticamente** en la nube (no necesitas Android Studio).
-Cada vez que se sube código, GitHub genera un APK listo para instalar.
-
-### Paso a paso
-
-1. Entra a tu repositorio en **GitHub**.
-2. Haz clic en la pestaña **`Actions`** (barra superior).
-3. En la lista de la izquierda elige **`Android CI`** (el workflow `Build Release APK & AAB`).
-   - 🟡 **Amarillo** = está compilando (espera ~3-5 min).
-   - ✅ **Verde** = terminó bien, el APK está listo.
-   - ❌ **Rojo** = hubo un error (abre el log para verlo).
-4. Haz clic en la **ejecución con ✅ verde** (la más reciente, arriba).
-5. Baja hasta la sección **`Artifacts`** al final de la página.
-6. Descarga:
-   - **`app-release-apk`** → contiene **`app-release.apk`** (el instalable).
-   - **`app-release-aab`** → contiene el bundle para Google Play.
-7. **Descomprime** el archivo descargado (GitHub entrega los artifacts en `.zip`).
-
-> 💡 Atajo: también puedes lanzarlo a mano desde
-> `Actions` → `Android CI` → botón **`Run workflow`**.
-
----
-
-## 📲 Instalación en el teléfono
-
-1. Pasa el **`app-release.apk`** al teléfono (cable, Google Drive, WhatsApp, etc.).
-2. Ábrelo. Android pedirá **"permitir instalar apps de fuentes desconocidas"** → actívalo.
-3. Toca **Instalar**.
-
-### ⚠️ Si sale "Aplicación no instalada"
-
-Este APK está firmado con una clave de **release** propia (`citasmedicas-release.jks`).
-Si ya tenías instalada una versión anterior **con otra firma**, Android la rechaza por
-conflicto de firmas. Solución:
-
-> **Desinstala primero la app anterior** (ajustes → Aplicaciones → Citas Médicas →
-> Desinstalar), y vuelve a instalar el APK nuevo.
-
-A partir de ahí, las actualizaciones futuras se instalarán **encima** sin problemas,
-porque todas usan la misma firma (versión actual del repo: `versionCode 2`).
-
----
+ [⬇️ Descargar APK (Android)](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v2.0/CitasMedicas-v2.0.apk)
+ [⬇️ Descargar AAB (Google Play)](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v2.0/CitasMedicas-v2.0.aab)
 
 ## 🏗️ Arquitectura (MVVM)
 
@@ -172,44 +115,6 @@ con datos generados en `MockData.java`. Los **endpoints** disponibles son:
 > 🎂 La **edad del paciente** forma parte de la información del paciente y se
 > visualiza en la app (detalle de cita, "Mis Citas" y perfil).
 
----
-
-## 🖥️ Abrir y compilar en Android Studio
-
-1. Abre **Android Studio** (versión reciente, con **JDK 17 o superior**).
-2. `File` → `Open...` y selecciona la carpeta del proyecto (donde está `settings.gradle`).
-3. Espera a que termine el **Gradle Sync**.
-4. Conecta un teléfono (o crea un emulador) y pulsa **Run ▶**.
-
-> Si Android Studio pide la ubicación del SDK, se configura solo. No hace falta
-> `local.properties` en el repositorio (está en `.gitignore` a propósito).
-
----
-
-## ⌨️ Compilar por terminal
-
-Requisitos: **JDK 17+** (el CI usa **JDK 21**) y el **Android SDK** configurado.
-
-```bash
-# APK de depuración
-./gradlew assembleDebug
-
-# APK de release (firmado)
-./gradlew assembleRelease
-
-# Bundle para Google Play
-./gradlew bundleRelease
-```
-
-Los archivos generados aparecen en:
-
-```
-app/build/outputs/apk/release/app-release.apk
-app/build/outputs/bundle/release/app-release.aab
-```
-
----
-
 ## 🧰 Tecnologías y versiones
 
 | Componente | Versión |
@@ -225,40 +130,3 @@ app/build/outputs/bundle/release/app-release.aab
 | Persistencia | Room 2.6.1 (SQLite) |
 | UI | Material Design 3, RecyclerView, CardView |
 
----
-
-## 🛠️ Solución de problemas
-
-### El workflow de Actions falla al descargar Gradle
-Asegúrate de que **`gradle/wrapper/gradle-wrapper.jar`** se subió **íntegro** (es un
-binario). El archivo **`.gitattributes`** del repositorio existe precisamente para
-protegerlo. **Nunca** edites ese JAR ni lo subas arrastrando archivos por la web de
-GitHub; usa `git push` o Android Studio.
-### "Aplicación no instalada" en el teléfono
-Desinstala la versión previa (conflicto de firmas) e instala el APK nuevo. Ver
-[Instalación en el teléfono](#-instalación-en-el-teléfono).
-
-### El APK pesa poco / no abre
-Descarga el APK **desde la sección `Artifacts`** de una ejecución **verde**, no desde
-"Code" ni desde los Assets de un release vacío.
-
-### Gradle no encuentra el SDK
-Crea `local.properties` en la raíz (solo en tu PC, no se sube) con:
-```properties
-sdk.dir=/ruta/a/tu/Android/Sdk
-```
-
----
-
-## 🔐 Nota sobre la firma
-
-> ⚠️ La keystore **`citasmedicas-release.jks`** y **`key.properties`** incluidas son de
-> **demostración**, pensadas para que GitHub Actions genere un APK instalable sin
-> configurar secretos. **En un proyecto de producción real** NO deben subirse al
-> repositorio: guárdalas de forma segura y defínelas como **GitHub Secrets**.
-
----
-
-## 📄 Licencia
-
-Proyecto con fines educativos.
