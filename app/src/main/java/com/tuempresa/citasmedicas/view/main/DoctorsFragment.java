@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -88,7 +89,11 @@ public class DoctorsFragment extends Fragment {
         rvSpecialties.setAdapter(specialtyAdapter);
 
         RecyclerView rvDoctors = view.findViewById(R.id.rvDoctors);
-        rvDoctors.setLayoutManager(new LinearLayoutManager(getContext()));
+        int spanCount = getResources().getInteger(R.integer.doctors_span_count);
+        RecyclerView.LayoutManager doctorsLayoutManager = spanCount > 1
+                ? new GridLayoutManager(requireContext(), spanCount)
+                : new LinearLayoutManager(requireContext());
+        rvDoctors.setLayoutManager(doctorsLayoutManager);
         doctorAdapter = new DoctorAdapter(this::onDoctorSelected);
         rvDoctors.setAdapter(doctorAdapter);
 
