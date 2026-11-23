@@ -63,8 +63,10 @@ public class DoctorDetailActivity extends AppCompatActivity {
     /** Evita crear la cita dos veces si el usuario toca varias veces el botón. */
     private boolean isSubmitting = false;
 
-    /** Edad del paciente resuelta: primero desde la API, con respaldo en la sesión. */
+    /** Edad del paciente resuelta: primero desde la sesión, con respaldo en la API. */
     private int patientAge;
+    /** Edad recibida desde la API mock (solo se usa si la sesión no la tiene). */
+    private int apiPatientAge;
     /** Nombre del paciente que se guardará en la cita. */
     private String patientName;
 
@@ -81,7 +83,7 @@ public class DoctorDetailActivity extends AppCompatActivity {
 
         sessionUser = SessionManager.getInstance(this).getUser();
         patientName = sessionUser != null && sessionUser.getFullName() != null
-                ? sessionUser.getFullName() : "Paciente";
+                ? sessionUser.getFullName() : getString(R.string.patient_default);
         patientAge = sessionUser != null ? sessionUser.getAge() : 0;
 
         bindViews();
@@ -112,9 +114,12 @@ public class DoctorDetailActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.tvDoctorAvatar)).setText(doctor.getInitials());
         ((TextView) findViewById(R.id.tvDoctorName)).setText(doctor.getDisplayName());
         ((TextView) findViewById(R.id.tvDoctorSpecialty)).setText(doctor.getSpecialtyName());
-        ((TextView) findViewById(R.id.tvDoctorRating)).setText("\u2b50 " + doctor.getRating()
-                + "  \u00b7  " + doctor.getYearsExperience() + " a\u00f1os de experiencia");
-        tvDoctorAge.setText("\ud83c\udf82 " + doctor.getAge() + " a\u00f1os");
+        ((TextView) findViewById(R.id.tvDoctorRating)).setText(
+                getResources().getQuantityString(R.plurals.rating_experience,
+                        doctor.getYearsExperience(),
+                        String.valueOf(doctor.getRating()), doctor.getYearsExperience()));
+        tvDoctorAge.setText(getResources().getQuantityString(
+                R.plurals.years_with_cake, doctor.getAge(), doctor.getAge()));
         ((TextView) findViewById(R.id.tvDoctorBio)).setText(doctor.getBio());
     }
 
@@ -167,8 +172,12 @@ public class DoctorDetailActivity extends AppCompatActivity {
             return;
         }
         Patient patient = resource.data;
-        // La edad proviene de los datos generados por IA en la API mock.
-        patientAge = patient.getAge();
+        apiPatientAge = patient.getAge();
+        // La edad de la sesión (la que el usuario registró) tiene prioridad;
+        // la edad generada por IA en la API mock solo actúa como respaldo.
+        if (patientAge <= 0 && apiPatientAge > 0) {
+            patientAge = apiPatientAge;
+        }
     }
 
     private void loadSlotsForSelectedDate(@Nullable String date) {

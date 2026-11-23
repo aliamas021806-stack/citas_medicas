@@ -130,3 +130,88 @@ con datos generados en `MockData.java`. Los **endpoints** disponibles son:
 | Persistencia | Room 2.6.1 (SQLite) |
 | UI | Material Design 3, RecyclerView, CardView |
 
+
+---
+
+## ✅ Estado de calidad (verificado)
+
+Todas las cifras siguientes se obtuvieron ejecutando los comandos en un entorno
+limpio con **JDK 21** y **Android SDK 34**:
+
+```bash
+./gradlew clean testDebugUnitTest lintDebug assembleDebug assembleRelease bundleRelease
+```
+
+| Comprobación | Resultado |
+|---|---|
+| Compilación (`assembleDebug` / `assembleRelease` / `bundleRelease`) | ✅ **BUILD SUCCESSFUL** |
+| Pruebas unitarias | ✅ **51 tests · 0 fallos · 0 errores** |
+| Android Lint | ✅ **0 problemas** (`No issues found`) |
+| Archivos Kotlin (`.kt` / `.kts`) | ✅ **0** — proyecto 100% Java |
+| APK release | 5.3 MB · firmado · instalable |
+| AAB release | 4.8 MB |
+
+### 🧪 Pruebas incluidas
+
+| Clase | Tests | Qué cubre |
+|---|---|---|
+| `MockDataTest` | 20 | Especialidades, doctores (edad/rating/especialidad), pacientes (edad, datos clínicos, IMC), horarios y fechas |
+| `BusinessLogicTest` | 23 | `AuthValidator` (email, contraseña, edad, login y registro), `AppointmentMapper` (edad preservada), `Doctor.getDisplayName()`, `User` |
+| `UiSmokeTest` | 8 | Robolectric: infla los **11 layouts**, arranca las **3 Activities**, resuelve **plurales** y verifica `SessionManager` |
+
+Las pruebas de UI usan **Robolectric 4.14.1**, así que se ejecutan en la JVM
+**sin emulador** (también en GitHub Actions).
+
+### 🎂 La edad del paciente
+
+- Se genera aleatoriamente (datos "de IA") en `MockData.getPatients()` y viaja en la
+  API: `GET /api/patients` y `GET /api/patients/{id}`.
+- Se muestra en el **perfil** (expediente), en el **detalle de la cita** y en cada
+  tarjeta de **"Mis Citas"**.
+- **Prioridad**: si el usuario registró su edad en el login, prevalece esa; la edad de
+  la API actúa solo como respaldo.
+
+---
+
+## ▶️ Cómo ejecutar
+
+### Android Studio
+1. `File → Open` y selecciona la carpeta del proyecto.
+2. Espera a la sincronización de Gradle (AGP 8.5.2 / Gradle 8.7).
+3. Pulsa **Run** con un emulador o dispositivo (Android 7.0+).
+
+### Línea de comandos
+```bash
+# Requiere JDK 17+ (probado con JDK 21) y el Android SDK 34
+echo "sdk.dir=/ruta/a/Android/Sdk" > local.properties
+
+./gradlew testDebugUnitTest     # pruebas
+./gradlew assembleDebug         # APK de desarrollo
+./gradlew assembleRelease       # APK firmado de release
+./gradlew bundleRelease         # AAB para Google Play
+```
+
+### CI/CD
+`.github/workflows/android.yml` se ejecuta en cada push a `main`/`master` con **JDK 21**:
+pruebas → APK de release → AAB → subida de artefactos (`app-release-apk`,
+`app-release-aab`, `test-report`).
+
+---
+
+## 🔐 Nota sobre la firma
+
+`key.properties` y `citasmedicas-release.jks` se incluyen en el repositorio **a
+propósito y solo como demostración**, para que GitHub Actions pueda generar un APK de
+release instalable sin configurar secretos.
+
+**En un proyecto real NO se debe subir la keystore:** guárdala de forma segura y
+expón sus valores como *GitHub Secrets*.
+
+---
+
+## 📦 Versiones ancladas
+
+Las dependencias y el `compileSdk` están **fijados deliberadamente** para garantizar
+una compilación reproducible con JDK 21 / AGP 8.5.2 / SDK 34. Los avisos de "hay una
+versión más nueva" (`GradleDependency`, `OldTargetApi`) y la sugerencia de rendimiento
+`Overdraw` están documentados y suprimidos en [`app/lint.xml`](app/lint.xml).

@@ -84,7 +84,7 @@ public class CitasFragment extends Fragment
                 rvAppointments.setVisibility(View.GONE);
             }
             if (tvSummary != null) {
-                tvSummary.setText("Consulta y gestiona tus citas");
+                tvSummary.setText(R.string.appointments_subtitle);
             }
             return;
         }
@@ -105,7 +105,8 @@ public class CitasFragment extends Fragment
             }
         }
         if (tvSummary != null) {
-            tvSummary.setText(active + " cita(s) activa(s) de " + appointments.size() + " en total");
+            tvSummary.setText(getResources().getQuantityString(
+                    R.plurals.active_summary, active, active, appointments.size()));
         }
     }
 

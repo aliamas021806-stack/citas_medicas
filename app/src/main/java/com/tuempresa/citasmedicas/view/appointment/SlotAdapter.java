@@ -103,13 +103,13 @@ public class SlotAdapter extends RecyclerView.Adapter<SlotAdapter.SlotViewHolder
                     : tvTime.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
 
             if (!available) {
-                tvAvailability.setText("No disponible");
+                tvAvailability.setText(R.string.slot_unavailable);
                 tvAvailability.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.text_secondary));
             } else if (selected) {
-                tvAvailability.setText("Seleccionado");
+                tvAvailability.setText(R.string.slot_selected);
                 tvAvailability.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.white));
             } else {
-                tvAvailability.setText("Disponible");
+                tvAvailability.setText(R.string.slot_available);
                 tvAvailability.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.status_confirmed));
             }
 

@@ -19,7 +19,7 @@
             android:id="@+id/tvGreeting"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Hola"
+            android:text="@string/greeting_default"
             android:textColor="@color/white"
             android:textSize="24sp"
             android:textStyle="bold" />
@@ -113,8 +113,17 @@
                     android:layout_height="wrap_content"
                     android:layout_margin="@dimen/spacing_lg"
                     android:gravity="center"
-                    android:text="No se encontraron doctores"
+                    android:text="@string/no_doctors_found"
                     android:textColor="@color/text_secondary"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRetry"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:text="@string/retry"
                     android:visibility="gone" />
 
                 <View

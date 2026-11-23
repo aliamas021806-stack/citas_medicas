@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Supresiones de lint DOCUMENTADAS.
+
+    Este proyecto fija sus versiones a propósito para garantizar la
+    compilación reproducible con JDK 21 / AGP 8.5.2 / compileSdk 34. Las
+    siguientes comprobaciones son avisos de "hay una versión más nueva" o
+    sugerencias de rendimiento, no errores reales.
+-->
+<lint>
+
+    <!--
+        Avisos de "existe una versión más reciente" en las dependencias y en el
+        compileSdk/targetSdk. Las versiones están deliberadamente ancladas a
+        compileSdk 34 para que el build funcione sin descargar SDK adicionales
+        (y sin romper la compatibilidad con JDK 21).
+    -->
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="OldTargetApi" severity="ignore" />
+
+    <!--
+        Overdraw es una recomendación de rendimiento sobre capas de fondo.
+        Los layouts usan fondos intencionales (cabeceras con degradado, tarjetas
+        y selectores de estado) y el impacto medido es insignificante.
+    -->
+    <issue id="Overdraw" severity="ignore" />
+
+</lint>

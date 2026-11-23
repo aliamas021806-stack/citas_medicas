@@ -71,7 +71,7 @@ public class Doctor implements Serializable {
             return "Doctor";
         }
         String firstName = fullName.trim().split("\\s+")[0];
-        boolean female = firstName.toLowerCase().endsWith("a");
+        boolean female = firstName.toLowerCase(java.util.Locale.getDefault()).endsWith("a");
         return (female ? "Dra. " : "Dr. ") + fullName;
     }
 

@@ -1,5 +1,6 @@
 package com.tuempresa.citasmedicas.view.appointment;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -98,16 +99,19 @@ public class AppointmentAdapter
         }
 
         void bind(AppointmentEntity item, OnAppointmentActionListener listener) {
-            tvDoctorName.setText(name(item));
+            Context ctx = itemView.getContext();
+            tvDoctorName.setText(name(ctx, item));
             tvSpecialty.setText(safe(item.specialtyName));
-            tvPatientAge.setText("\ud83c\udf82 Paciente: " + safe(item.patientName)
-                    + " \u00b7 " + item.patientAge + " a\u00f1os");
-            tvDate.setText("\ud83d\udcc5 " + formatDate(item.date));
-            tvTime.setText("\ud83d\udd52 " + safe(item.time));
+            tvPatientAge.setText(ctx.getString(R.string.fmt_patient_age,
+                    safe(item.patientName),
+                    ctx.getResources().getQuantityString(
+                            R.plurals.years, item.patientAge, item.patientAge)));
+            tvDate.setText(ctx.getString(R.string.fmt_appointment_date, formatDate(item.date)));
+            tvTime.setText(ctx.getString(R.string.fmt_appointment_time, safe(item.time)));
 
             if (item.reason != null && !item.reason.trim().isEmpty()) {
                 tvReason.setVisibility(View.VISIBLE);
-                tvReason.setText("Motivo: " + item.reason.trim());
+                tvReason.setText(ctx.getString(R.string.fmt_reason, item.reason.trim()));
             } else {
                 tvReason.setVisibility(View.GONE);
             }
@@ -142,13 +146,13 @@ public class AppointmentAdapter
             }
         }
 
-        private String name(AppointmentEntity item) {
+        private String name(Context ctx, AppointmentEntity item) {
             String doctor = safe(item.doctorName);
-            if (doctor.isEmpty()) {
-                return "Doctor";
+            if (doctor.trim().isEmpty()) {
+                return ctx.getString(R.string.doctor_unknown);
             }
             String first = doctor.trim().split("\\s+")[0];
-            boolean female = first.toLowerCase().endsWith("a");
+            boolean female = first.toLowerCase(Locale.getDefault()).endsWith("a");
             return (female ? "Dra. " : "Dr. ") + doctor;
         }
 

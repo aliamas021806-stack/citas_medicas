@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
             toolbar.setTitle(R.string.tab_appointments);
         } else if (id == R.id.nav_profile) {
             fragment = new ProfileFragment();
-            toolbar.setTitle(R.string.tab_profile);
+            toolbar.setTitle(R.string.profile_title);
         } else {
             fragment = new DoctorsFragment();
             toolbar.setTitle(R.string.tab_doctors);

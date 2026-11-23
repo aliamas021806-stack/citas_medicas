@@ -32,6 +32,7 @@ public class ProfileFragment extends Fragment {
 
     private AppointmentViewModel appointmentViewModel;
     private PatientViewModel patientViewModel;
+    private User currentUser;
 
     private TextView tvAvatar, tvName, tvEmail, tvAge, tvUpcoming, tvTotal;
     private TextView tvInfoAge, tvInfoPhone, tvInfoBlood, tvInfoInsurance, tvInfoAllergies, tvInfoLoading;
@@ -62,11 +63,17 @@ public class ProfileFragment extends Fragment {
         tvInfoLoading = view.findViewById(R.id.tvInfoLoading);
 
         User user = SessionManager.getInstance(requireContext()).getUser();
+        currentUser = user;
         if (user != null) {
             tvAvatar.setText(user.getInitials());
             tvName.setText(user.getFullName());
             tvEmail.setText(user.getEmail());
-            tvAge.setText(user.getAge() > 0 ? user.getAge() + " años" : "Edad no registrada");
+            if (user.getAge() > 0) {
+                tvAge.setText(getResources().getQuantityString(
+                        R.plurals.years, user.getAge(), user.getAge()));
+            } else {
+                tvAge.setText(R.string.age_not_registered);
+            }
         }
 
         MaterialButton btnLogout = view.findViewById(R.id.btnLogout);
@@ -94,7 +101,11 @@ public class ProfileFragment extends Fragment {
                 tvInfoLoading.setVisibility(View.GONE);
                 Patient p = resource.data;
                 if (p != null) {
-                    tvInfoAge.setText(p.getAge() + " años");
+                    // La edad registrada en la sesión manda; la de la API es respaldo.
+                    int age = (currentUser != null && currentUser.getAge() > 0)
+                            ? currentUser.getAge() : p.getAge();
+                    tvInfoAge.setText(getResources().getQuantityString(
+                            R.plurals.years, age, age));
                     tvInfoPhone.setText(safe(p.getPhone()));
                     tvInfoBlood.setText(safe(p.getBloodType()));
                     tvInfoInsurance.setText(safe(p.getInsurance()));
@@ -102,15 +113,18 @@ public class ProfileFragment extends Fragment {
                 }
                 break;
             case ERROR:
-                tvInfoLoading.setVisibility(View.GONE);
-                tvInfoLoading.setText(resource.message);
+                tvInfoLoading.setText(resource.message != null
+                        ? resource.message : getString(R.string.loading_error));
                 tvInfoLoading.setVisibility(View.VISIBLE);
                 break;
         }
     }
 
     private String safe(String s) {
-        return (s == null || s.trim().isEmpty()) ? "—" : s;
+        if (s == null || s.trim().isEmpty()) {
+            return getString(R.string.value_placeholder);
+        }
+        return s;
     }
 
     private void updateStats(List<AppointmentEntity> list) {

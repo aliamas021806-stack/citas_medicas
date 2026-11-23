@@ -87,7 +87,7 @@ public class LoginActivity extends AppCompatActivity {
         if (isRegisterMode) {
             String name = etName.getText() != null ? etName.getText().toString().trim() : "";
             if (TextUtils.isEmpty(name)) {
-                showError("Por favor ingresa tu nombre completo");
+                showError(getString(R.string.error_name_required));
                 return;
             }
             String ageStr = etAge.getText() != null ? etAge.getText().toString().trim() : "";
@@ -100,7 +100,7 @@ public class LoginActivity extends AppCompatActivity {
                 }
             }
             if (ageStr.isEmpty() || age < 1 || age > 120) {
-                showError("Ingresa una edad válida (entre 1 y 120 años)");
+                showError(getString(R.string.error_age_invalid));
                 return;
             }
             viewModel.register(name, email, password, age);
@@ -134,7 +134,7 @@ public class LoginActivity extends AppCompatActivity {
     private void onAuthSuccess(User user) {
         SessionManager.getInstance(this).saveSession(user);
         Toast.makeText(this,
-                isRegisterMode ? "Cuenta creada. ¡Bienvenido!" : "¡Bienvenido de nuevo!",
+                isRegisterMode ? R.string.welcome_register : R.string.welcome_login,
                 Toast.LENGTH_SHORT).show();
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

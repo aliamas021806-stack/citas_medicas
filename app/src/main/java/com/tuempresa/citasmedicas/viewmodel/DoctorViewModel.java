@@ -95,11 +95,11 @@ public class DoctorViewModel extends ViewModel {
             doctors.setValue(Resource.success(allDoctors));
             return;
         }
-        String q = query.toLowerCase().trim();
+        String q = query.toLowerCase(java.util.Locale.getDefault()).trim();
         List<Doctor> filtered = new ArrayList<>();
         for (Doctor d : allDoctors) {
-            if (d.getFullName().toLowerCase().contains(q)
-                    || d.getSpecialtyName().toLowerCase().contains(q)) {
+            if (d.getFullName().toLowerCase(java.util.Locale.getDefault()).contains(q)
+                    || d.getSpecialtyName().toLowerCase(java.util.Locale.getDefault()).contains(q)) {
                 filtered.add(d);
             }
         }

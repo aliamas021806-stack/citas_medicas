@@ -31,7 +31,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Consulta y gestiona tus citas"
+                android:text="@string/appointments_subtitle"
                 android:textColor="#E8F6F5"
                 android:textSize="14sp" />
         </LinearLayout>
@@ -62,7 +62,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="&#128197;"
+            android:text="@string/calendar_emoji"
             android:textSize="56sp" />
 
         <TextView
@@ -77,7 +77,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs"
-            android:text="Explora los doctores y agenda una cita"
+            android:text="@string/appointments_empty_hint"
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
     </LinearLayout>

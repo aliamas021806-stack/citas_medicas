@@ -18,6 +18,5 @@
     <color name="status_pending">#E0A106</color>
 
     <color name="white">#FFFFFF</color>
-    <color name="black">#000000</color>
     <color name="error">#D64545</color>
 </resources>

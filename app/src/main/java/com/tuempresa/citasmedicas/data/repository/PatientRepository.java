@@ -34,6 +34,10 @@ public class PatientRepository {
             public void onResponse(Call<T> c, Response<T> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     mainHandler.post(() -> callback.onSuccess(response.body()));
+                } else if (response.isSuccessful()) {
+                    // 200 pero sin cuerpo: el recurso pedido no existe.
+                    mainHandler.post(() ->
+                            callback.onError("No se encontró la información del paciente"));
                 } else {
                     mainHandler.post(() -> callback.onError("Respuesta inválida del servidor"));
                 }

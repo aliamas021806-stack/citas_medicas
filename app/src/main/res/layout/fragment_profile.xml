@@ -85,7 +85,7 @@
                         android:id="@+id/tvUpcomingCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0"
+                        android:text="@string/value_zero"
                         android:textColor="@color/primary"
                         android:textSize="26sp"
                         android:textStyle="bold" />
@@ -117,7 +117,7 @@
                         android:id="@+id/tvTotalCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0"
+                        android:text="@string/value_zero"
                         android:textColor="@color/secondary"
                         android:textSize="26sp"
                         android:textStyle="bold" />
@@ -150,7 +150,7 @@
                     android:id="@+id/tvPatientInfoTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Expediente del paciente"
+                    android:text="@string/patient_record_title"
                     android:textAppearance="@style/TextAppearance.CitasMedicas.Title"
                     android:textSize="16sp" />
 
@@ -164,7 +164,7 @@
                     android:id="@+id/tvInfoLoading"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Cargando información del paciente…"
+                    android:text="@string/patient_record_loading"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
                     android:visibility="gone" />
@@ -177,7 +177,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🎂  Edad"
+                        android:text="@string/label_age"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp" />
 
@@ -188,7 +188,7 @@
                         android:layout_marginStart="@dimen/spacing_sm"
                         android:layout_weight="1"
                         android:gravity="end"
-                        android:text="—"
+                        android:text="@string/value_placeholder"
                         android:textColor="@color/text_secondary"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -202,7 +202,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📱  Teléfono"
+                        android:text="@string/label_phone"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp" />
 
@@ -213,7 +213,7 @@
                         android:layout_marginStart="@dimen/spacing_sm"
                         android:layout_weight="1"
                         android:gravity="end"
-                        android:text="—"
+                        android:text="@string/value_placeholder"
                         android:textColor="@color/text_secondary"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -227,7 +227,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🩸  Grupo sanguíneo"
+                        android:text="@string/label_blood"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp" />
 
@@ -238,7 +238,7 @@
                         android:layout_marginStart="@dimen/spacing_sm"
                         android:layout_weight="1"
                         android:gravity="end"
-                        android:text="—"
+                        android:text="@string/value_placeholder"
                         android:textColor="@color/text_secondary"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -252,7 +252,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🏥  Aseguradora"
+                        android:text="@string/label_insurance"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp" />
 
@@ -263,7 +263,7 @@
                         android:layout_marginStart="@dimen/spacing_sm"
                         android:layout_weight="1"
                         android:gravity="end"
-                        android:text="—"
+                        android:text="@string/value_placeholder"
                         android:textColor="@color/text_secondary"
                         android:textSize="15sp" />
                 </LinearLayout>
@@ -277,7 +277,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="⚠️  Alergias"
+                        android:text="@string/label_allergies"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp" />
 
@@ -288,7 +288,7 @@
                         android:layout_marginStart="@dimen/spacing_sm"
                         android:layout_weight="1"
                         android:gravity="end"
-                        android:text="—"
+                        android:text="@string/value_placeholder"
                         android:textColor="@color/text_secondary"
                         android:textSize="15sp" />
                 </LinearLayout>

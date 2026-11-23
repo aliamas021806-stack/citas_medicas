@@ -1,5 +1,6 @@
 package com.tuempresa.citasmedicas.view.main;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -72,18 +73,24 @@ public class DoctorAdapter extends ListAdapter<Doctor, DoctorAdapter.DoctorViewH
         }
 
         void bind(Doctor doctor, OnDoctorClickListener listener) {
+            Context ctx = itemView.getContext();
             tvAvatar.setText(doctor.getInitials());
             tvName.setText(doctor.getDisplayName());
             tvSpecialty.setText(doctor.getSpecialtyName());
-            tvRating.setText("⭐ " + doctor.getRating());
-            tvAge.setText("🎂 " + doctor.getAge() + " años");
-            tvHospital.setText("🏥 " + safe(doctor.getHospital()));
-            tvFee.setText("$" + (int) doctor.getConsultationFee());
+            tvRating.setText(ctx.getString(R.string.fmt_rating,
+                    String.valueOf(doctor.getRating())));
+            tvAge.setText(ctx.getResources().getQuantityString(
+                    R.plurals.years_with_cake, doctor.getAge(), doctor.getAge()));
+            tvHospital.setText(ctx.getString(R.string.fmt_hospital, safe(ctx, doctor.getHospital())));
+            tvFee.setText(ctx.getString(R.string.fmt_fee, (int) doctor.getConsultationFee()));
             itemView.setOnClickListener(v -> listener.onDoctorClick(doctor));
         }
 
-        private String safe(String s) {
-            return s != null ? s : "—";
+        private String safe(Context ctx, String s) {
+            if (s == null || s.trim().isEmpty()) {
+                return ctx.getString(R.string.value_dash);
+            }
+            return s;
         }
     }
 }

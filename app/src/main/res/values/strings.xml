@@ -13,6 +13,12 @@
     <string name="toggle_register">¿No tienes cuenta? Regístrate</string>
     <string name="toggle_login">¿Ya tienes cuenta? Inicia sesión</string>
     <string name="logout">Cerrar sesión</string>
+    <string name="login_icon">➕</string>
+    <string name="login_demo_hint">Demo: cualquier correo válido + contraseña de 4 caracteres</string>
+    <string name="welcome_register">Cuenta creada correctamente</string>
+    <string name="welcome_login">Bienvenido de nuevo</string>
+    <string name="error_name_required">Ingresa tu nombre completo</string>
+    <string name="error_age_invalid">Ingresa una edad válida (entre 1 y 120 años)</string>
 
     <!-- Dashboard / navegación -->
     <string name="tab_doctors">Doctores</string>
@@ -21,6 +27,10 @@
     <string name="specialty_title">Especialidades Médicas</string>
     <string name="doctors_title">Doctores destacados</string>
     <string name="search_hint">Buscar doctor o especialidad…</string>
+    <string name="greeting_default">Hola</string>
+    <string name="fmt_greeting">Hola, %1$s 👋</string>
+    <string name="fmt_specialist_only">Encuentra a tu especialista</string>
+    <string name="no_doctors_found">No se encontraron doctores</string>
 
     <!-- Detalle doctor -->
     <string name="book_appointment">Agendar cita</string>
@@ -28,10 +38,19 @@
     <string name="select_time">Selecciona un horario</string>
     <string name="available_slots">Horarios disponibles</string>
     <string name="confirm_appointment">Confirmar cita</string>
+    <string name="reason_hint">Motivo de la consulta (opcional)</string>
+    <string name="fmt_rating">⭐ %1$s</string>
+    <string name="fmt_hospital">🏥 %1$s</string>
+    <string name="fmt_fee">$%1$d</string>
+    <string name="doctor_unknown">Doctor</string>
+    <string name="value_dash">—</string>
 
     <!-- Citas -->
     <string name="my_appointments">Mis Citas Médicas</string>
     <string name="no_appointments">No tienes citas agendadas todavía</string>
+    <string name="appointments_subtitle">Consulta y gestiona tus citas</string>
+    <string name="appointments_empty_hint">Explora los doctores y agenda una cita</string>
+    <string name="calendar_emoji">📅</string>
     <string name="appointment_confirmed">¡Cita agendada correctamente!</string>
     <string name="appointment_cancelled">Cita cancelada</string>
     <string name="cancel_appointment">Cancelar cita</string>
@@ -41,6 +60,15 @@
     <string name="dismiss">Cerrar</string>
     <string name="retry">Reintentar</string>
     <string name="loading_error">Ocurrió un error al cargar los datos</string>
+    <string name="fmt_appointment_date">📅 %1$s</string>
+    <string name="fmt_appointment_time">🕒 %1$s</string>
+    <string name="fmt_patient_age">🎂 Paciente: %1$s · %2$s</string>
+    <string name="fmt_reason">Motivo: %1$s</string>
+
+    <!-- Horarios -->
+    <string name="slot_available">Disponible</string>
+    <string name="slot_unavailable">No disponible</string>
+    <string name="slot_selected">Seleccionado</string>
 
     <!-- Estados de cita -->
     <string name="status_confirmed">Confirmada</string>
@@ -51,4 +79,37 @@
     <string name="profile_title">Mi Perfil</string>
     <string name="profile_upcoming">Citas próximas</string>
     <string name="profile_total">Citas totales</string>
+    <string name="value_zero">0</string>
+    <string name="age_not_registered">Edad no registrada</string>
+    <string name="patient_record_title">Expediente del paciente</string>
+    <string name="patient_record_loading">Cargando información del paciente…</string>
+    <string name="label_age">🎂  Edad</string>
+    <string name="label_phone">📱  Teléfono</string>
+    <string name="label_blood">🩸  Grupo sanguíneo</string>
+    <string name="label_insurance">🏥  Aseguradora</string>
+    <string name="label_allergies">⚠️  Alergias</string>
+    <string name="value_placeholder">—</string>
+    <string name="patient_default">Paciente</string>
+
+    <!-- Plurales -->
+    <plurals name="years">
+        <item quantity="one">%1$d año</item>
+        <item quantity="other">%1$d años</item>
+    </plurals>
+    <plurals name="years_with_cake">
+        <item quantity="one">🎂 %1$d año</item>
+        <item quantity="other">🎂 %1$d años</item>
+    </plurals>
+    <plurals name="cake_years_specialist">
+        <item quantity="one">🎂 %1$d año · Encuentra a tu especialista</item>
+        <item quantity="other">🎂 %1$d años · Encuentra a tu especialista</item>
+    </plurals>
+    <plurals name="rating_experience">
+        <item quantity="one">⭐ %1$s  ·  %2$d año de experiencia</item>
+        <item quantity="other">⭐ %1$s  ·  %2$d años de experiencia</item>
+    </plurals>
+    <plurals name="active_summary">
+        <item quantity="one">%1$d cita activa de %2$d en total</item>
+        <item quantity="other">%1$d citas activas de %2$d en total</item>
+    </plurals>
 </resources>

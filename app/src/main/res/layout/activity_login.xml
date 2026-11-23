@@ -25,7 +25,7 @@
                 android:layout_height="56dp"
                 android:background="@drawable/bg_avatar"
                 android:gravity="center"
-                android:text="&#10133;"
+                android:text="@string/login_icon"
                 android:textColor="@color/white"
                 android:textSize="26sp" />
 
@@ -181,7 +181,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_sm"
                     android:gravity="center"
-                    android:text="Demo: cualquier correo válido + contraseña de 4 caracteres"
+                    android:text="@string/login_demo_hint"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
             </LinearLayout>

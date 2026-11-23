@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.tuempresa.citasmedicas.R;
 import com.tuempresa.citasmedicas.model.Doctor;
@@ -41,6 +42,7 @@ public class DoctorsFragment extends Fragment {
     private DoctorAdapter doctorAdapter;
     private ProgressBar progressBar;
     private TextView tvEmpty, tvGreeting, tvPatientHeaderAge;
+    private MaterialButton btnRetry;
     private SwipeRefreshLayout swipeRefresh;
 
     @Nullable
@@ -57,17 +59,26 @@ public class DoctorsFragment extends Fragment {
 
         progressBar = view.findViewById(R.id.progressBar);
         tvEmpty = view.findViewById(R.id.tvEmpty);
+        btnRetry = view.findViewById(R.id.btnRetry);
         tvGreeting = view.findViewById(R.id.tvGreeting);
         tvPatientHeaderAge = view.findViewById(R.id.tvPatientHeaderAge);
         swipeRefresh = view.findViewById(R.id.swipeRefresh);
 
+        btnRetry.setOnClickListener(v -> {
+            tvEmpty.setVisibility(View.GONE);
+            btnRetry.setVisibility(View.GONE);
+            viewModel.loadHome();
+        });
+
         User user = SessionManager.getInstance(requireContext()).getUser();
         if (user != null) {
-            tvGreeting.setText("Hola, " + user.getFullName() + " 👋");
-            String ageText = user.getAge() > 0
-                    ? "🎂 " + user.getAge() + " años · Encuentra a tu especialista"
-                    : "Encuentra a tu especialista";
-            tvPatientHeaderAge.setText(ageText);
+            tvGreeting.setText(getString(R.string.fmt_greeting, user.getFullName()));
+            if (user.getAge() > 0) {
+                tvPatientHeaderAge.setText(getResources().getQuantityString(
+                        R.plurals.cake_years_specialist, user.getAge(), user.getAge()));
+            } else {
+                tvPatientHeaderAge.setText(R.string.fmt_specialist_only);
+            }
         }
 
         RecyclerView rvSpecialties = view.findViewById(R.id.rvSpecialties);
@@ -120,18 +131,24 @@ public class DoctorsFragment extends Fragment {
             switch (resource.status) {
                 case LOADING:
                     progressBar.setVisibility(View.VISIBLE);
+                    tvEmpty.setVisibility(View.GONE);
+                    btnRetry.setVisibility(View.GONE);
                     break;
                 case SUCCESS:
                     progressBar.setVisibility(View.GONE);
                     List<Doctor> doctors = resource.data;
+                    boolean empty = doctors == null || doctors.isEmpty();
                     doctorAdapter.submitList(doctors);
-                    tvEmpty.setVisibility(doctors == null || doctors.isEmpty()
-                            ? View.VISIBLE : View.GONE);
+                    tvEmpty.setText(R.string.no_doctors_found);
+                    tvEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+                    btnRetry.setVisibility(empty ? View.VISIBLE : View.GONE);
                     break;
                 case ERROR:
                     progressBar.setVisibility(View.GONE);
+                    tvEmpty.setText(resource.message != null
+                            ? resource.message : getString(R.string.loading_error));
                     tvEmpty.setVisibility(View.VISIBLE);
-                    tvEmpty.setText(resource.message);
+                    btnRetry.setVisibility(View.VISIBLE);
                     break;
             }
         });
