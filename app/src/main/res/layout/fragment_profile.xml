@@ -57,6 +57,19 @@
                 android:textColor="@color/primary_dark"
                 android:textSize="14sp"
                 android:textStyle="bold" />
+
+            <!-- Origen de datos: "Mock" o "Firebase (proyecto)". Permite
+                 comprobar de un vistazo si la base de datos está conectada. -->
+            <TextView
+                android:id="@+id/tvDataSource"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_chip"
+                android:paddingHorizontal="@dimen/spacing_md"
+                android:paddingVertical="4dp"
+                android:textColor="@color/primary_dark"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <LinearLayout

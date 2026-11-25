@@ -112,4 +112,8 @@
         <item quantity="one">%1$d cita activa de %2$d en total</item>
         <item quantity="other">%1$d citas activas de %2$d en total</item>
     </plurals>
+
+    <!-- Origen de datos (mock o Firebase) -->
+    <string name="data_source_mock">Datos de prueba (sin base de datos)</string>
+    <string name="data_source_firebase">Conectado a %1$s</string>
 </resources>

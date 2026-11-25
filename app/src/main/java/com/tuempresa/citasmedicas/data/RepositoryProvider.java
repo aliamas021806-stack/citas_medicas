@@ -4,6 +4,10 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 
+import com.tuempresa.citasmedicas.data.firebase.FirebaseAuthRepository;
+import com.tuempresa.citasmedicas.data.firebase.FirebaseConfig;
+import com.tuempresa.citasmedicas.data.firebase.FirestoreDoctorRepository;
+import com.tuempresa.citasmedicas.data.firebase.FirestorePatientRepository;
 import com.tuempresa.citasmedicas.data.repository.AppointmentRepository;
 import com.tuempresa.citasmedicas.data.repository.AuthRepository;
 import com.tuempresa.citasmedicas.data.repository.DoctorRepository;
@@ -14,35 +18,28 @@ import com.tuempresa.citasmedicas.domain.repository.IDoctorRepository;
 import com.tuempresa.citasmedicas.domain.repository.IPatientRepository;
 
 /**
- * Raíz de composición del proyecto: <b>el único sitio donde se decide qué
- * implementación concreta usa cada repositorio</b>.
+ * Raíz de composición: <b>el único sitio donde se decide qué implementación usa cada
+ * repositorio</b>.
  * <p>
- * <b>Por qué existe.</b> Antes cada {@code ViewModel} hacía
- * {@code new DoctorRepository()} y el {@code AuthViewModel} hacía
- * {@code new AuthRepository()}. Eso significaba que cambiar la fuente de datos
- * obligaba a buscar y editar todos esos puntos —y las pruebas no podían inyectar
- * una fuente falsa—. Concentrar la construcción aquí convierte ese problema en un
- * cambio de una sola línea.
+ * <b>Cómo funciona el interruptor.</b> {@link FirebaseConfig#isEnabled()} devuelve
+ * {@code true} sólo si Gradle inyectó {@code FIREBASE_PROJECT_ID} y
+ * {@code FIREBASE_API_KEY} (desde {@code local.properties} o variables de entorno).
+ * Si falta cualquiera de los dos, todo cae a las implementaciones simuladas y la app
+ * se comporta exactamente igual que antes de existir Firebase.
  * <p>
- * <b>Cómo se conectará Firestore sin romper nada.</b> La gráfica de decisión queda
- * reducida a los métodos de esta clase. Para migrar bastará:
- * <ol>
- *   <li>Crear {@code FirebaseAuthRepository implements IAuthRepository} y ponerlo en
- *       {@link #auth(Context)} en lugar de {@code AuthRepository}.</li>
- *   <li>Crear {@code FirestoreDoctorRepository implements IDoctorRepository} y
- *       devolverlo en {@link #doctors()}, o devolver un repositorio que combine
- *       remoto + respaldo local.</li>
- *   <li>Para citas, <b>no se sustituye</b> {@link #appointments(Context)}: Room
- *       sigue siendo la fuente de verdad de la UI y Firestore se añade como
- *       sincronizador en segundo plano.</li>
- * </ol>
- * Ni las pantallas, ni los {@code ViewModel}, ni los casos de uso necesitan cambios:
- * todos dependen de las interfaces de {@code domain.repository}.
+ * Eso tiene tres consecuencias prácticas:
+ * <ul>
+ *   <li><b>GitHub Actions y el APK del profesor</b> siguen funcionando sin
+ *       configurar nada: compilan en modo mock.</li>
+ *   <li><b>Nunca se suben claves</b> al repositorio: {@code local.properties} está
+ *       en {@code .gitignore}.</li>
+ *   <li><b>Se puede volver atrás</b> borrando una línea del archivo de propiedades,
+ *       sin tocar código.</li>
+ * </ul>
  * <p>
- * <b>Nota sobre singletons.</b> Los repositorios de catálogo no guardan estado
- * (solo envuelven el {@code MedicalApiService}, que ya es un singleton), así que se
- * crean bajo demanda. El de citas sí recibe el {@code Context} de aplicación porque
- * necesita la base de datos Room.
+ * <b>Room no se sustituye nunca.</b> {@link #appointments(Context)} sigue devolviendo
+ * el repositorio local: Room es la fuente de verdad de la UI (reactividad y offline).
+ * Firestore se añadirá como sincronizador en segundo plano, no como reemplazo.
  */
 public final class RepositoryProvider {
 
@@ -50,29 +47,67 @@ public final class RepositoryProvider {
         // Clase de utilidades: no se instancia.
     }
 
-    /** Autenticación. Actualmente simulada en el dispositivo. */
+    /**
+     * ¿Está Firebase configurado y activo?
+     * <p>
+     * Útil para que la UI pueda indicar el modo activo (por ejemplo, en Perfil).
+     */
+    public static boolean isUsingFirebase() {
+        return FirebaseConfig.isEnabled();
+    }
+
+    /** Descripción del origen de datos activo: {@code "Mock"} o {@code "Firebase (...)"}. */
+    @NonNull
+    public static String describeDataSource() {
+        return FirebaseConfig.describeMode();
+    }
+
+    /**
+     * Autenticación.
+     * <p>
+     * Con Firebase configurado se usa {@link FirebaseAuthRepository} (REST de
+     * Identity Toolkit). Si no, la validación local simulada de siempre.
+     */
     @NonNull
     public static IAuthRepository auth(@NonNull Context context) {
+        if (FirebaseConfig.isEnabled()) {
+            return new FirebaseAuthRepository();
+        }
         return new AuthRepository();
     }
 
-    /** Catálogo médico (especialidades, doctores y horarios). */
+    /**
+     * Catálogo médico.
+     * <p>
+     * Con Firebase se leen las colecciones {@code doctors} y {@code specialties}.
+     * Los <b>horarios disponibles</b> se siguen resolviendo localmente (no se migran
+     * en esta fase), por eso el repositorio remoto recibe el local como respaldo.
+     */
     @NonNull
     public static IDoctorRepository doctors() {
+        if (FirebaseConfig.isEnabled()) {
+            return new FirestoreDoctorRepository(new DoctorRepository());
+        }
         return new DoctorRepository();
     }
 
     /** Pacientes y su expediente. */
     @NonNull
     public static IPatientRepository patients() {
+        if (FirebaseConfig.isEnabled()) {
+            return new FirestorePatientRepository();
+        }
         return new PatientRepository();
     }
 
     /**
      * Citas médicas.
      * <p>
-     * Se pasa el {@code Context} de aplicación para que Room use su propio ciclo de
-     * vida y no retenga una {@code Activity}.
+     * <b>Deliberadamente NO usa Firebase.</b> Room es la fuente de verdad de la UI:
+     * es lo que da reactividad ({@code LiveData} que emite al insertar o cancelar) y
+     * lo que hace que la app funcione sin internet. Firestore se conectará más
+     * adelante como capa de sincronización usando
+     * {@link AppointmentRepository#getDaoForSync()}.
      */
     @NonNull
     public static IAppointmentRepository appointments(@NonNull Context context) {

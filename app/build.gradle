@@ -69,6 +69,9 @@ android {
     // La firma v1 tambien se habilita por compatibilidad con Android < 7.
     buildFeatures {
         viewBinding true
+        // Necesario para BuildConfig: expone la configuracion de Firebase
+        // (leida de local.properties) como constantes de Java.
+        buildConfig true
     }
 
     lint {
@@ -76,6 +79,32 @@ android {
         lintConfig file("lint.xml")
         abortOnError true
         checkReleaseBuilds false
+    }
+
+    // ── Configuración de Firebase ────────────────────────────────────────────
+    // Las credenciales se leen de local.properties (ignorado por git) para no
+    // subir nunca claves al repositorio. Si faltan, la app arranca en MODO MOCK:
+    // exactamente igual que hoy. Así el proyecto compila en CI y para el profesor
+    // sin necesidad de configurar nada.
+    def firebasePropsFile = rootProject.file("local.properties")
+    def firebaseProps = new Properties()
+    if (firebasePropsFile.exists()) {
+        firebasePropsFile.withInputStream { firebaseProps.load(it) }
+    }
+    // Valor efectivo: variable de entorno > local.properties > vacío
+    def fbApiKey    = System.getenv("FIREBASE_API_KEY")     ?: firebaseProps.getProperty("FIREBASE_API_KEY", "")
+    def fbProjectId = System.getenv("FIREBASE_PROJECT_ID")  ?: firebaseProps.getProperty("FIREBASE_PROJECT_ID", "")
+    def fbAppId     = System.getenv("FIREBASE_APP_ID")      ?: firebaseProps.getProperty("FIREBASE_APP_ID", "")
+    def fbSenderId  = System.getenv("FIREBASE_SENDER_ID")   ?: firebaseProps.getProperty("FIREBASE_SENDER_ID", "")
+
+    defaultConfig {
+        buildConfigField "String", "FIREBASE_API_KEY",    "\"${fbApiKey}\""
+        buildConfigField "String", "FIREBASE_PROJECT_ID", "\"${fbProjectId}\""
+        buildConfigField "String", "FIREBASE_APP_ID",     "\"${fbAppId}\""
+        buildConfigField "String", "FIREBASE_SENDER_ID",  "\"${fbSenderId}\""
+        // Interruptor global: sólo se conecta si hay projectId + apiKey.
+        buildConfigField "boolean", "FIREBASE_ENABLED",
+                "${(!fbApiKey.isEmpty() && !fbProjectId.isEmpty())}"
     }
 
     // Compatible con JDK 21: compilamos bytecode para Java 17 (soportado por Android)

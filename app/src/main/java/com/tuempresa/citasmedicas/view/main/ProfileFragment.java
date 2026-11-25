@@ -34,7 +34,7 @@ public class ProfileFragment extends Fragment {
     private PatientViewModel patientViewModel;
     private User currentUser;
 
-    private TextView tvAvatar, tvName, tvEmail, tvAge, tvUpcoming, tvTotal;
+    private TextView tvAvatar, tvName, tvEmail, tvAge, tvUpcoming, tvTotal, tvDataSource;
     private TextView tvInfoAge, tvInfoPhone, tvInfoBlood, tvInfoInsurance, tvInfoAllergies, tvInfoLoading;
 
     @Nullable
@@ -52,6 +52,7 @@ public class ProfileFragment extends Fragment {
         tvName = view.findViewById(R.id.tvName);
         tvEmail = view.findViewById(R.id.tvEmail);
         tvAge = view.findViewById(R.id.tvAge);
+        tvDataSource = view.findViewById(R.id.tvDataSource);
         tvUpcoming = view.findViewById(R.id.tvUpcomingCount);
         tvTotal = view.findViewById(R.id.tvTotalCount);
 
@@ -74,6 +75,14 @@ public class ProfileFragment extends Fragment {
             } else {
                 tvAge.setText(R.string.age_not_registered);
             }
+        }
+
+        // Indicador del origen de datos: ayuda a verificar la conexión con Firebase.
+        if (tvDataSource != null) {
+            boolean firebase = com.tuempresa.citasmedicas.data.RepositoryProvider.isUsingFirebase();
+            tvDataSource.setText(getString(
+                    firebase ? R.string.data_source_firebase : R.string.data_source_mock,
+                    com.tuempresa.citasmedicas.data.RepositoryProvider.describeDataSource()));
         }
 
         MaterialButton btnLogout = view.findViewById(R.id.btnLogout);

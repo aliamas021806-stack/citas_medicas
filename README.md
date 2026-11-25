@@ -12,6 +12,8 @@
 > - Login: cualquier correo válido + contraseña de 4 caracteres (ej. `profesor@universidad.edu` / `1234`)
 > - **Funciona 100 % sin internet** · no requiere crear cuenta
 > - 📄 Guía extendida: **[PROBAR_APP.md](PROBAR_APP.md)** · 🏷️ [Página de la release v3.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0)
+>
+> 🔥 **¿Quieres conectar tu base de datos de Firebase?** → **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**
 
 ---
 
@@ -200,7 +202,7 @@ limpio con **JDK 21** y **Android SDK 34**:
 | Comprobación | Resultado |
 |---|---|
 | Compilación (`assembleDebug` / `assembleRelease` / `bundleRelease`) | ✅ **BUILD SUCCESSFUL** |
-| Pruebas automatizadas | ✅ **158 tests · 0 fallos · 0 errores** |
+| Pruebas automatizadas | ✅ **177 tests · 0 fallos · 0 errores** |
 | Android Lint | ✅ **0 problemas** (`No issues found`) |
 | Archivos Kotlin (`.kt` / `.kts`) | ✅ **0** — proyecto 100% Java |
 | APK release | 5.4 MB · firmado · instalable |
@@ -210,6 +212,7 @@ limpio con **JDK 21** y **Android SDK 34**:
 
 | Clase | Tests | Qué cubre |
 |---|---|---|
+| `FirebaseRestTest` | 19 | **Capa Firebase por REST**: modo mock por defecto sin credenciales, mapeo de documentos de Firestore (enteros como texto, campos ausentes, rutas completas), construcción del JSON de escritura, y verificación de que **no se añade ningún SDK** (0 Kotlin) |
 | `FaseCeroArquitecturaTest` | 17 | **Contratos para Firestore**: las 4 interfaces son públicas y bien formadas, el provider devuelve implementaciones usables, el mapeo modelo↔entidad no pierde campos, y **tests que congelan la arquitectura** (fallan si alguien vuelve a importar Room desde la UI o a instanciar repositorios en un ViewModel) |
 | `PantallasArrancanTest` | 15 | **Abre las pantallas de verdad** con el ciclo de vida completo: login, cambio a registro, login inválido, login válido → navegación, main con y sin sesión, las 3 pestañas, detalle del doctor, confirmar sin horario, y **rotación** de pantalla |
 | `FullFlowTest` | 13 | **Flujo completo**: sesión persistente, catálogo, horario disponible, agendar en Room, aparece en "Mis Citas", sobrevive a reabrir la app, cancelar cita y contadores |
@@ -308,28 +311,39 @@ Sin tocar Firebase todavía, se dejó la estructura lista y verificada:
 **Resultado:** 158 tests, 0 fallos; 0 incidencias de Lint; 0 archivos Kotlin.
 La app funciona exactamente igual que antes.
 
-#### Pasos concretos para cuando se conecte Firebase
+### ✅ Fases 1 y 2 — Implementadas (Firebase por REST)
 
-- [ ] Crear el proyecto en la [consola de Firebase](https://console.firebase.google.com/)
-      y registrar la app Android con el paquete **`com.tuempresa.citasmedicas`**
-      (el `package_name` del `google-services.json` **debe** coincidir exactamente,
-      igual que el `applicationId`, el `package` del manifest y la ruta de `MainActivity`).
-- [ ] Descargar `google-services.json` y colocarlo en `app/google-services.json`.
-- [ ] Crear la base de datos en **Firestore Database** (sin esto, toda escritura falla).
-- [ ] Colecciones previstas: `doctors`, `specialties`, `patients`, `appointments`.
-- [ ] **Fase 1 — Auth:** crear `FirebaseAuthRepository implements IAuthRepository` y
-      devolverlo en `RepositoryProvider.auth(...)`. Es el cambio más limpio de todos.
-- [ ] **Fase 2 — Catálogo:** crear `FirestoreDoctorRepository implements IDoctorRepository`
-      y `FirestorePatientRepository implements IPatientRepository`; devolverlos en el
-      provider. Room puede actuar como caché de lectura.
-- [ ] **Fase 3 — Citas:** **no sustituir** `AppointmentRepository`. Añadir un
+Ya existe la capa completa de Firebase **sin añadir ningún SDK** (por tanto, sin
+Kotlin). Se usan las APIs REST de Google con el Retrofit que la app ya tenía:
+
+| Archivo | Qué hace |
+|---|---|
+| `data/firebase/FirebaseConfig.java` | Lee las credenciales de `BuildConfig` y decide si hay conexión |
+| `data/firebase/FirebaseAuthApi.java` | Endpoints de Authentication (`signInWithPassword`, `signUp`) |
+| `data/firebase/FirebaseAuthRepository.java` | `IAuthRepository` real + traducción de errores al español |
+| `data/firebase/FirestoreApi.java` | Endpoints de Firestore (listar, leer, crear, consultar) |
+| `data/firebase/FirestoreClient.java` | Retrofit apuntando a `firestore.googleapis.com` |
+| `data/firebase/FirestoreMapper.java` | Convierte documentos de Firestore a modelos de dominio |
+| `data/firebase/FirestoreDoctorRepository.java` | `IDoctorRepository` real |
+| `data/firebase/FirestorePatientRepository.java` | `IPatientRepository` real |
+
+**El interruptor es automático:** si `local.properties` tiene `FIREBASE_PROJECT_ID` y
+`FIREBASE_API_KEY`, se usa Firebase; si no, la app arranca en **modo mock** (idéntico
+a hoy). En la pantalla de **Perfil** aparece un chip que indica el origen de datos.
+
+👉 Guía paso a paso con los datos necesarios: **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**
+
+#### Pendiente (Fase 3)
+
+- [ ] **Citas en Firestore:** no se sustituye `AppointmentRepository`. Añadir un
       sincronizador (`AppointmentSyncWorker`) que lea del DAO
       (`getDaoForSync()`) y empuje a Firestore. Room sigue siendo la fuente de verdad
-      de la UI.
-- [ ] Añadir un flag (`useFirebase`) por defecto `false`, para poder volver atrás sin
-      tocar código.
-- [ ] Reglas de seguridad de Firestore y **no usar `orderBy()` con `where()`** sin
-      índices compuestos: filtrar y ordenar en memoria, como ya hace el repositorio.
+      de la UI (reactividad + offline).
+- [ ] **Horarios:** hoy se calculan en local. Migrarlos requiere modelar la ocupación
+      por doctor en Firestore.
+- [ ] Reglas de seguridad definitivas (`allow read: if request.auth != null`).
+- [ ] **No usar `orderBy()` con `where()`** sin índices compuestos: filtrar y ordenar
+      en memoria, como ya hace el repositorio.
 
 > 💡 **Atajo si se quiere mantener "Java puro":** Firestore y Auth tienen **API REST**
 > (`https://firestore.googleapis.com/v1/...` y `identitytoolkit`). Se pueden consumir
