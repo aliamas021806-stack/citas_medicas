@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Columnas de las grillas en TABLET (>= 600dp de ancho).
+  Los RecyclerView leen estas columnas en tiempo de ejecución, así que el mismo
+  código Java sirve para teléfono y tablet sin ramas por tamaño de pantalla.
+-->
+<resources>
+    <integer name="doctors_grid_columns">2</integer>
+    <integer name="appointments_grid_columns">2</integer>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Comportamiento de la lista de especialidades.
+
+  Teléfono: carrusel horizontal (1 fila con scroll lateral), que es el patrón
+  habitual para "chips" de categoría en pantallas estrechas.
+  Tablet: grilla de 2 columnas en el panel izquierdo (ver values-sw600dp/bools.xml).
+
+  Se expone como recurso para que DoctorsFragment no tenga que preguntar por el
+  tamaño de pantalla: lee el valor y actúa.
+-->
+<resources>
+    <bool name="specialties_as_grid">false</bool>
+</resources>

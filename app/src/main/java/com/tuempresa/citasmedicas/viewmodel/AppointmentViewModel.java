@@ -9,18 +9,32 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.tuempresa.citasmedicas.data.local.AppointmentEntity;
 import com.tuempresa.citasmedicas.data.repository.AppointmentRepository;
-import com.tuempresa.citasmedicas.data.repository.RepositoryCallback;
+import com.tuempresa.citasmedicas.domain.UseCase;
+import com.tuempresa.citasmedicas.domain.usecase.CancelAppointmentUseCase;
+import com.tuempresa.citasmedicas.domain.usecase.CreateAppointmentUseCase;
+import com.tuempresa.citasmedicas.domain.usecase.GetAppointmentsUseCase;
 import com.tuempresa.citasmedicas.model.Appointment;
 import com.tuempresa.citasmedicas.util.Resource;
 
 import java.util.List;
 
 /**
- * ViewModel de citas médicas. Observa Room (SQLite) y gestiona crear/cancelar.
+ * ViewModel de citas médicas.
+ * <p>
+ * Consume los CASOS DE USO de {@code domain} (no el repositorio directamente):
+ * <ul>
+ *   <li>{@link GetAppointmentsUseCase} expone Room como flujo observable.</li>
+ *   <li>{@link CreateAppointmentUseCase} valida la cita antes de guardarla.</li>
+ *   <li>{@link CancelAppointmentUseCase} gestiona la cancelación.</li>
+ * </ul>
+ * Así la regla de negocio vive en dominio y este ViewModel solo traduce a
+ * {@link Resource} para la UI.
  */
 public class AppointmentViewModel extends AndroidViewModel {
 
-    private final AppointmentRepository repository;
+    private final GetAppointmentsUseCase getAppointmentsUseCase;
+    private final CreateAppointmentUseCase createAppointmentUseCase;
+    private final CancelAppointmentUseCase cancelAppointmentUseCase;
 
     private final LiveData<List<AppointmentEntity>> appointments;
     private final MutableLiveData<Resource<Void>> actionState = new MutableLiveData<>();
@@ -33,8 +47,11 @@ public class AppointmentViewModel extends AndroidViewModel {
 
     public AppointmentViewModel(@NonNull Application application) {
         super(application);
-        repository = new AppointmentRepository(application);
-        appointments = repository.observeAll();
+        AppointmentRepository repository = new AppointmentRepository(application);
+        this.getAppointmentsUseCase = new GetAppointmentsUseCase(repository);
+        this.createAppointmentUseCase = new CreateAppointmentUseCase(repository);
+        this.cancelAppointmentUseCase = new CancelAppointmentUseCase(repository);
+        this.appointments = getAppointmentsUseCase.execute();
     }
 
     public LiveData<List<AppointmentEntity>> getAppointments() {
@@ -51,7 +68,7 @@ public class AppointmentViewModel extends AndroidViewModel {
 
     public void createAppointment(Appointment appointment) {
         actionState.setValue(Resource.loading());
-        repository.create(appointment, new RepositoryCallback<Long>() {
+        createAppointmentUseCase.execute(appointment, new UseCase.Callback<Long>() {
             @Override
             public void onSuccess(Long data) {
                 actionState.setValue(Resource.success(null));
@@ -68,7 +85,7 @@ public class AppointmentViewModel extends AndroidViewModel {
 
     public void cancelAppointment(long appointmentId) {
         actionState.setValue(Resource.loading());
-        repository.cancel(appointmentId, new RepositoryCallback<Void>() {
+        cancelAppointmentUseCase.execute(appointmentId, new UseCase.Callback<Void>() {
             @Override
             public void onSuccess(Void data) {
                 actionState.setValue(Resource.success(null));

@@ -9,6 +9,10 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
+        // Mirror de Maven Central en Google Storage: Maven Central responde HTTP 429
+        // (rate limit) al descargar los artefactos de Robolectric. Este mirror sirve
+        // exactamente los mismos artefactos y no limita, así que la CI nunca falla por eso.
+        maven { url 'https://maven-central.storage-download.googleapis.com/maven2' }
         mavenCentral()
     }
 }

@@ -82,6 +82,9 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        // minSdk es 24, pero java.time exige API 26: el desugaring reescribe esas
+        // llamadas para que funcionen desde API 24 sin subir el minSdk.
+        coreLibraryDesugaringEnabled true
     }
 
     testOptions {
@@ -89,6 +92,18 @@ android {
         unitTests {
             includeAndroidResources = true
             returnDefaultValues = true
+            all {
+                // Maven Central aplica rate-limit (HTTP 429) al bajar los android-all
+                // de Robolectric. Se fuerza el mirror de Google, que sirve los mismos
+                // artefactos sin límite. Sin esto la suite falla de forma intermitente.
+                systemProperty 'robolectric.dependency.repo.url',
+                        'https://maven-central.storage-download.googleapis.com/maven2'
+                systemProperty 'robolectric.logging', 'stdout'
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
         }
     }
 
@@ -131,4 +146,7 @@ dependencies {
     testImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+
+    // Permite usar java.time (LocalDate) desde API 24 (minSdk) en lugar de API 26.
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }

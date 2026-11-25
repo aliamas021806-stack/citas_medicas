@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Escala de espaciados para TABLET (>= 600dp).
+
+  En una pantalla grande el mismo espaciado de teléfono deja el contenido
+  "pegado" y con jerarquía visual pobre, así que se escala la retícula y los
+  elementos táctiles. Las claves coinciden exactamente con values/dimens.xml:
+  ninguna vista cambia de nombre, sólo de medida.
+-->
+<resources>
+
+    <!-- Retícula: misma proporción, mayor amplitud -->
+    <dimen name="spacing_xs">6dp</dimen>
+    <dimen name="spacing_sm">12dp</dimen>
+    <dimen name="spacing_md">24dp</dimen>
+    <dimen name="spacing_lg">32dp</dimen>
+    <dimen name="spacing_xl">48dp</dimen>
+
+    <!-- Formas y avatares algo mayores para no verse diminutos -->
+    <dimen name="card_radius">20dp</dimen>
+    <dimen name="avatar_size">64dp</dimen>
+
+    <!-- Tablet: las tarjetas van en grilla de 2 columnas y necesitan aire entre sí. -->
+    <dimen name="grid_item_half_gap">8dp</dimen>
+</resources>

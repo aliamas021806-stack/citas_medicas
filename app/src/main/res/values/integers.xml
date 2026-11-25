@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Columnas de las grillas en TELÉFONO (retrato): una sola columna, apilado vertical.
+  La variante values-sw600dp/ redefine estos valores para tablet.
+-->
+<resources>
+    <integer name="doctors_grid_columns">1</integer>
+    <integer name="appointments_grid_columns">1</integer>
+</resources>

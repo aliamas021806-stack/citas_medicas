@@ -3,6 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/grid_item_half_gap"
+    android:layout_marginEnd="@dimen/grid_item_half_gap"
     android:layout_marginBottom="@dimen/spacing_sm"
     app:cardCornerRadius="@dimen/card_radius"
     app:cardElevation="2dp">

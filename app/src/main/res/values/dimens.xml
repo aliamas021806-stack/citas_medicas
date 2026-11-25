@@ -7,4 +7,11 @@
     <dimen name="spacing_xl">32dp</dimen>
     <dimen name="card_radius">16dp</dimen>
     <dimen name="avatar_size">56dp</dimen>
+
+    <!--
+      Separación lateral de una tarjeta cuando va dentro de una grilla.
+      En teléfono la lista es de 1 columna, así que no hace falta separación
+      adicional: 0dp deja el diseño idéntico al de siempre.
+    -->
+    <dimen name="grid_item_half_gap">0dp</dimen>
 </resources>

@@ -13,6 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -82,13 +83,26 @@ public class DoctorsFragment extends Fragment {
         }
 
         RecyclerView rvSpecialties = view.findViewById(R.id.rvSpecialties);
-        rvSpecialties.setLayoutManager(new LinearLayoutManager(getContext(),
-                LinearLayoutManager.HORIZONTAL, false));
+        if (getResources().getBoolean(R.bool.specialties_as_grid)) {
+            // Tablet: grilla dentro del panel izquierdo (ver layout-sw600dp).
+            rvSpecialties.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        } else {
+            // Teléfono: carrusel horizontal.
+            rvSpecialties.setLayoutManager(new LinearLayoutManager(getContext(),
+                    LinearLayoutManager.HORIZONTAL, false));
+        }
         specialtyAdapter = new SpecialtyAdapter(this::onSpecialtySelected);
         rvSpecialties.setAdapter(specialtyAdapter);
 
         RecyclerView rvDoctors = view.findViewById(R.id.rvDoctors);
-        rvDoctors.setLayoutManager(new LinearLayoutManager(getContext()));
+        // Las columnas viven en res/values/integers.xml (1 en teléfono, 2 en
+        // values-sw600dp): no hace falta preguntar por el tamaño de pantalla.
+        int doctorColumns = getResources().getInteger(R.integer.doctors_grid_columns);
+        if (doctorColumns > 1) {
+            rvDoctors.setLayoutManager(new GridLayoutManager(getContext(), doctorColumns));
+        } else {
+            rvDoctors.setLayoutManager(new LinearLayoutManager(getContext()));
+        }
         doctorAdapter = new DoctorAdapter(this::onDoctorSelected);
         rvDoctors.setAdapter(doctorAdapter);
 

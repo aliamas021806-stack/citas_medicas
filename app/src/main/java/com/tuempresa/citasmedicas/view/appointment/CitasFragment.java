@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -54,7 +55,14 @@ public class CitasFragment extends Fragment
         tvSummary = view.findViewById(R.id.tvSummary);
 
         adapter = new AppointmentAdapter(this);
-        rvAppointments.setLayoutManager(new LinearLayoutManager(requireContext()));
+        // Columnas resueltas por recursos: 1 en teléfono, 2 en tablet (values-sw600dp).
+        int appointmentColumns = getResources().getInteger(R.integer.appointments_grid_columns);
+        if (appointmentColumns > 1) {
+            rvAppointments.setLayoutManager(
+                    new GridLayoutManager(requireContext(), appointmentColumns));
+        } else {
+            rvAppointments.setLayoutManager(new LinearLayoutManager(requireContext()));
+        }
         rvAppointments.setAdapter(adapter);
 
         if (swipeRefresh != null) {
