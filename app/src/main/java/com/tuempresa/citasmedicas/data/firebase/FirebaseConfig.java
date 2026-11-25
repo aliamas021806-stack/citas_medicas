@@ -36,8 +36,42 @@ public final class FirebaseConfig {
         // Clase de utilidades: no se instancia.
     }
 
+    /**
+     * Fuerza el estado del interruptor en pruebas.
+     * <p>
+     * <b>Por qué existe.</b> {@link #isEnabled()} depende de {@code BuildConfig}, que se
+     * genera al compilar a partir de {@code local.properties}. Eso significa que el
+     * resultado cambia según la máquina: en la CI (sin credenciales) es {@code false} y
+     * en un equipo con claves es {@code true}. Los tests de UI necesitan un entorno
+     * determinista, así que aquí se puede fijar el valor.
+     * <p>
+     * {@code null} (valor por defecto) significa "sin override": se usa la configuración
+     * real de compilación. Nunca se llama desde código de producción.
+     */
+    @Nullable
+    private static volatile Boolean overrideParaPruebas;
+
+    /**
+     * Fija el estado del interruptor para las pruebas.
+     *
+     * @param valor {@code true}/{@code false} para forzar, {@code null} para restaurar
+     *              el comportamiento real
+     */
+    public static void setEnabledForTesting(@Nullable Boolean valor) {
+        overrideParaPruebas = valor;
+    }
+
     /** ¿Hay credenciales suficientes para intentar hablar con Firebase? */
     public static boolean isEnabled() {
+        Boolean override = overrideParaPruebas;
+        if (override != null) {
+            return override;
+        }
+        return BuildConfig.FIREBASE_ENABLED;
+    }
+
+    /** Estado real de compilación, ignorando cualquier override de pruebas. */
+    public static boolean isEnabledByBuildConfig() {
         return BuildConfig.FIREBASE_ENABLED;
     }
 

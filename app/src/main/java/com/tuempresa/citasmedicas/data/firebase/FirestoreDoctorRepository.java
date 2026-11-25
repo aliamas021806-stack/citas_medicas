@@ -1,6 +1,7 @@
 package com.tuempresa.citasmedicas.data.firebase;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.tuempresa.citasmedicas.domain.repository.IDoctorRepository;
 import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
@@ -62,7 +63,8 @@ public class FirestoreDoctorRepository implements IDoctorRepository {
                             }
                             callback.onSuccess(lista);
                         } else {
-                            callback.onError(mensajeDeError(response.code(), "especialidades"));
+                            callback.onError(mensajeDeError(response.code(), "especialidades",
+                                    FirebaseErrors.cuerpoDeError(response)));
                         }
                     }
 
@@ -90,7 +92,8 @@ public class FirestoreDoctorRepository implements IDoctorRepository {
                             }
                             callback.onSuccess(lista);
                         } else {
-                            callback.onError(mensajeDeError(response.code(), "doctores"));
+                            callback.onError(mensajeDeError(response.code(), "doctores",
+                                    FirebaseErrors.cuerpoDeError(response)));
                         }
                     }
 
@@ -154,7 +157,8 @@ public class FirestoreDoctorRepository implements IDoctorRepository {
                             }
                             callback.onSuccess(d);
                         } else {
-                            callback.onError(mensajeDeError(response.code(), "doctor"));
+                            callback.onError(mensajeDeError(response.code(), "doctor",
+                                    FirebaseErrors.cuerpoDeError(response)));
                         }
                     }
 
@@ -179,8 +183,24 @@ public class FirestoreDoctorRepository implements IDoctorRepository {
 
     // ───────────────────────── Errores ─────────────────────────
 
+    /**
+     * Mensaje de error a partir del código HTTP y del cuerpo real de la respuesta.
+     * <p>
+     * Se lee {@code errorBody()} porque en un HTTP 4xx/5xx Retrofit deja
+     * {@code body()} a {@code null} y el motivo concreto de Google ({@code
+     * "The database (default) does not exist..."}, {@code "Missing or insufficient
+     * permissions"}) sólo está en ese cuerpo. Sin esto el usuario vería un "404" o
+     * "403" sin explicación.
+     */
     @NonNull
-    private String mensajeDeError(int httpCode, @NonNull String recurso) {
+    private String mensajeDeError(int httpCode, @NonNull String recurso,
+                                  @Nullable String jsonError) {
+        // Primero, el motivo real que da Google (base sin crear, reglas, colección).
+        String detalle = FirebaseErrors.describirErrorFirestore(httpCode, jsonError);
+        if (!detalle.isEmpty() && !detalle.equals(jsonError == null ? "" : jsonError.trim())) {
+            return detalle;
+        }
+
         switch (httpCode) {
             case 400:
                 return "La consulta a Firestore no es válida (400). Revisa los nombres de campo";

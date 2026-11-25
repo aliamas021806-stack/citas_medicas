@@ -6,6 +6,9 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import com.tuempresa.citasmedicas.data.RepositoryProvider;
+import com.tuempresa.citasmedicas.data.firebase.FirebaseAuthApi;
+import com.tuempresa.citasmedicas.data.firebase.FirebaseAuthFallback;
+import com.tuempresa.citasmedicas.data.firebase.FirebaseErrors;
 import com.tuempresa.citasmedicas.data.firebase.FirebaseConfig;
 import com.tuempresa.citasmedicas.data.firebase.FirestoreApi;
 import com.tuempresa.citasmedicas.data.firebase.FirestoreMapper;
@@ -45,24 +48,79 @@ import java.util.Map;
 @Config(sdk = 33)
 public class FirebaseRestTest {
 
-    // ───────────────────────── Modo mock por defecto ─────────────────────────
+    // ──────────────── Interruptor: los dos estados son válidos ────────────────
+    //
+    // Ojo: estos tests corren en dos escenarios distintos y ambos deben pasar.
+    //   a) En el repositorio (CI y APK del profesor): no hay local.properties con
+    //      claves -> FIREBASE_ENABLED = false -> modo mock.
+    //   b) En una máquina con credenciales: FIREBASE_ENABLED = true -> Firebase.
+    // Por eso se comprueba la COHERENCIA entre el interruptor y lo que devuelve el
+    // provider, en lugar de asumir un estado concreto.
 
     @Test
-    public void sinCredencialesLaAppSigueEnModoMock() {
-        // En el repositorio no hay local.properties con claves: FIREBASE_ENABLED=false.
-        assertFalse("Sin credenciales, Firebase debe estar desactivado",
-                FirebaseConfig.isEnabled());
-        assertFalse(RepositoryProvider.isUsingFirebase());
-        assertEquals("Mock", RepositoryProvider.describeDataSource());
+    public void elInterruptorYElProviderSiempreConcuerdan() {
+        boolean encendido = FirebaseConfig.isEnabled();
+
+        assertEquals("isUsingFirebase debe reflejar el mismo interruptor",
+                encendido, RepositoryProvider.isUsingFirebase());
+
+        if (encendido) {
+            assertTrue("Con credenciales, describeDataSource debe nombrar Firebase",
+                    RepositoryProvider.describeDataSource().startsWith("Firebase"));
+        } else {
+            assertEquals("Sin credenciales, describeDataSource debe ser Mock",
+                    "Mock", RepositoryProvider.describeDataSource());
+        }
+    }
+
+    @Test
+    public void laDescripcionDelModoNuncaEstaVacia() {
+        String descripcion = RepositoryProvider.describeDataSource();
+        assertNotNull(descripcion);
+        assertFalse("El chip de Perfil no debe quedar en blanco", descripcion.trim().isEmpty());
+    }
+
+    @Test
+    public void elProviderSiempreDevuelveUnAuthUsable() {
+        // Con o sin Firebase debe haber un repositorio de auth; null rompería el login.
+        assertNotNull(RepositoryProvider.auth(RuntimeEnvironment.getApplication()));
+    }
+
+    @Test
+    public void elProviderSiempreDevuelveCatalogoUsable() {
+        assertNotNull(RepositoryProvider.doctors());
+        assertNotNull(RepositoryProvider.patients());
     }
 
     @Test
     public void enModoMockElProviderDevuelveLasImplementacionesLocales() {
+        // Sólo aplica cuando NO hay credenciales (el caso de la CI).
+        org.junit.Assume.assumeFalse(
+                "Este test sólo verifica el modo mock", FirebaseConfig.isEnabled());
+
         assertTrue("Sin credenciales debe usarse AuthRepository (simulado)",
                 RepositoryProvider.auth(RuntimeEnvironment.getApplication())
                         instanceof AuthRepository);
         assertTrue("Sin credenciales debe usarse DoctorRepository (mock)",
                 RepositoryProvider.doctors() instanceof DoctorRepository);
+    }
+
+    @Test
+    public void enModoFirebaseElCatalogoVaEnvueltoEnRespaldoLocal() {
+        // Sólo aplica cuando SÍ hay credenciales. Lo importante: el repositorio que
+        // llega a la UI NO es directamente el local, sino un decorador que intenta
+        // Firestore y cae a los datos locales si algo falla. Así una base sin crear o
+        // unas reglas mal puestas no dejan las pantallas en blanco.
+        org.junit.Assume.assumeTrue(
+                "Este test sólo verifica el modo Firebase", FirebaseConfig.isEnabled());
+
+        assertFalse("Con credenciales el catálogo no debe ser el mock directo: "
+                        + "debe ir envuelto con respaldo local",
+                RepositoryProvider.doctors()
+                        instanceof com.tuempresa.citasmedicas.data.repository.DoctorRepository);
+        assertFalse("Con credenciales los pacientes no deben ser el mock directo",
+                RepositoryProvider.patients()
+                        instanceof com.tuempresa.citasmedicas.data.repository.PatientRepository);
     }
 
     @Test
@@ -306,11 +364,20 @@ public class FirebaseRestTest {
     @Test
     public void elPerfilMuestraElOrigenDeLosDatos() {
         // La UI debe poder informar si los datos vienen de Firebase o son simulados.
-        // Sin credenciales, el provider lo indica como "Mock".
+        // El chip de Perfil pinta esta cadena tal cual, así que nunca puede quedar
+        // vacía y debe corresponder al estado real del interruptor.
         String modo = RepositoryProvider.describeDataSource();
         assertNotNull(modo);
-        assertEquals("Mock", modo);
-        assertFalse("No debe decir Firebase sin credenciales", modo.contains("Firebase"));
+        assertFalse("El chip no puede quedar vacío", modo.trim().isEmpty());
+
+        if (FirebaseConfig.isEnabled()) {
+            assertTrue("Con credenciales el chip debe decir Firebase",
+                    modo.startsWith("Firebase"));
+            assertTrue("El chip debe nombrar el proyecto para poder verificarlo",
+                    modo.contains(FirebaseConfig.projectId()));
+        } else {
+            assertEquals("Sin credenciales el chip debe decir Mock", "Mock", modo);
+        }
     }
 
     @Test
@@ -356,5 +423,358 @@ public class FirebaseRestTest {
             sdkPresente = false;
         }
         assertFalse("El SDK de Firestore no debe estar en el classpath", sdkPresente);
+    }
+
+    // ───────────────── Respaldo local ante fallos de Firestore ─────────────────
+
+    /** Repositorio de prueba que siempre falla, para simular la nube caída. */
+    private static final class RepositorioQueFalla
+            implements com.tuempresa.citasmedicas.domain.repository.IDoctorRepository,
+            com.tuempresa.citasmedicas.domain.repository.IPatientRepository {
+
+        private final String mensaje;
+
+        RepositorioQueFalla(String mensaje) {
+            this.mensaje = mensaje;
+        }
+
+        @Override
+        public void getSpecialties(
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<Specialty>> cb) {
+            cb.onError(mensaje);
+        }
+
+        @Override
+        public void getDoctors(
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<Doctor>> cb) {
+            cb.onError(mensaje);
+        }
+
+        @Override
+        public void getDoctorsBySpecialty(String id,
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<Doctor>> cb) {
+            cb.onError(mensaje);
+        }
+
+        @Override
+        public void getDoctorById(String id,
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<Doctor> cb) {
+            cb.onError(mensaje);
+        }
+
+        @Override
+        public void getAvailableSlots(String id,
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<com.tuempresa.citasmedicas.model.TimeSlot>> cb) {
+            cb.onError(mensaje);
+        }
+
+        @Override
+        public void getPatients(
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<Patient>> cb) {
+            cb.onError(mensaje);
+        }
+
+        @Override
+        public void getPatientById(String id,
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<Patient> cb) {
+            cb.onError(mensaje);
+        }
+    }
+
+    /** Repositorio de prueba que devuelve una lista vacía (colección sin datos). */
+    private static final class RepositorioVacio
+            implements com.tuempresa.citasmedicas.domain.repository.IDoctorRepository {
+
+        @Override
+        public void getSpecialties(
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<Specialty>> cb) {
+            cb.onSuccess(new ArrayList<>());
+        }
+
+        @Override
+        public void getDoctors(
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<Doctor>> cb) {
+            cb.onSuccess(new ArrayList<>());
+        }
+
+        @Override
+        public void getDoctorsBySpecialty(String id,
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<Doctor>> cb) {
+            cb.onSuccess(new ArrayList<>());
+        }
+
+        @Override
+        public void getDoctorById(String id,
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<Doctor> cb) {
+            cb.onSuccess(null);
+        }
+
+        @Override
+        public void getAvailableSlots(String id,
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<com.tuempresa.citasmedicas.model.TimeSlot>> cb) {
+            cb.onSuccess(new ArrayList<>());
+        }
+    }
+
+    @Test
+    public void siFirestoreFallaSeSirvenLosDatosLocales() {
+        // Este es el comportamiento central: una base sin crear, unas reglas que
+        // bloquean o falta de red NO deben dejar la pantalla en blanco.
+        com.tuempresa.citasmedicas.data.repository.DoctorRepository local =
+                new com.tuempresa.citasmedicas.data.repository.DoctorRepository();
+
+        com.tuempresa.citasmedicas.domain.repository.IDoctorRepository decorado =
+                com.tuempresa.citasmedicas.data.firebase.FirestoreFallback.doctors(
+                        new RepositorioQueFalla("Firestore respondió con HTTP 404"), local);
+
+        final List<Doctor>[] recibidos = new List[]{null};
+        final String[] error = new String[]{null};
+        decorado.getDoctors(new com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<Doctor>>() {
+            @Override
+            public void onSuccess(List<Doctor> data) {
+                recibidos[0] = data;
+            }
+
+            @Override
+            public void onError(String message) {
+                error[0] = message;
+            }
+        });
+
+        esperar(new java.util.function.BooleanSupplier() {
+            @Override
+            public boolean getAsBoolean() {
+                return recibidos[0] != null || error[0] != null;
+            }
+        });
+
+        org.junit.Assert.assertNull("No debe propagarse el error si el local responde", error[0]);
+        assertNotNull("Deben servirse los datos locales", recibidos[0]);
+        assertFalse("Los datos locales no deben estar vacíos", recibidos[0].isEmpty());
+    }
+
+    @Test
+    public void siLaColeccionRemotaEstaVaciaTambienSeUsaElLocal() {
+        // Colección existente pero sin documentos: el usuario vería una lista en
+        // blanco igual que con un error, así que también se recurre al respaldo.
+        com.tuempresa.citasmedicas.data.repository.DoctorRepository local =
+                new com.tuempresa.citasmedicas.data.repository.DoctorRepository();
+
+        com.tuempresa.citasmedicas.domain.repository.IDoctorRepository decorado =
+                com.tuempresa.citasmedicas.data.firebase.FirestoreFallback.doctors(
+                        new RepositorioVacio(), local);
+
+        final List<Doctor>[] recibidos = new List[]{null};
+        decorado.getDoctors(new com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<Doctor>>() {
+            @Override
+            public void onSuccess(List<Doctor> data) {
+                recibidos[0] = data;
+            }
+
+            @Override
+            public void onError(String message) {
+                recibidos[0] = new ArrayList<>();
+            }
+        });
+
+        esperar(new java.util.function.BooleanSupplier() {
+            @Override
+            public boolean getAsBoolean() {
+                return recibidos[0] != null;
+            }
+        });
+
+        assertNotNull(recibidos[0]);
+        assertFalse("El respaldo local no debe devolver una lista vacía",
+                recibidos[0].isEmpty());
+    }
+
+    @Test
+    public void elRespaldoNuncaDejaLosHorariosSinResponder() {
+        // Los horarios siempre son locales: el respaldo no debe interceptarlos.
+        com.tuempresa.citasmedicas.data.repository.DoctorRepository local =
+                new com.tuempresa.citasmedicas.data.repository.DoctorRepository();
+
+        com.tuempresa.citasmedicas.domain.repository.IDoctorRepository decorado =
+                com.tuempresa.citasmedicas.data.firebase.FirestoreFallback.doctors(
+                        new RepositorioQueFalla("sin red"), local);
+
+        final List<com.tuempresa.citasmedicas.model.TimeSlot>[] slots = new List[]{null};
+        decorado.getAvailableSlots("doc_01",
+                new com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<List<com.tuempresa.citasmedicas.model.TimeSlot>>() {
+                    @Override
+                    public void onSuccess(List<com.tuempresa.citasmedicas.model.TimeSlot> data) {
+                        slots[0] = data;
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        slots[0] = new ArrayList<>();
+                    }
+                });
+
+        esperar(new java.util.function.BooleanSupplier() {
+            @Override
+            public boolean getAsBoolean() {
+                return slots[0] != null;
+            }
+        });
+
+        assertNotNull("El respaldo debe entregar horarios", slots[0]);
+        assertFalse("Deben venir horarios reales del cálculo local", slots[0].isEmpty());
+    }
+
+    // ─────────────── Lectura de errores (body() vs errorBody()) ───────────────
+
+    @Test
+    public void elErrorSeLeeDelErrorBodyCuandoLaRespuestaNoEsExitosa() {
+        // BUG REAL corregido: en Retrofit, con un HTTP 4xx el cuerpo NO se convierte al
+        // tipo declarado (body() == null) y el JSON queda en errorBody(). Si sólo se
+        // leía body(), los mensajes de Firebase se perdían y el usuario veía un
+        // genérico "inténtalo de nuevo" en vez de "ese correo ya existe".
+        String jsonError = "{\"error\":{\"code\":400,\"message\":\"EMAIL_EXISTS\","
+                + "\"errors\":[{\"message\":\"EMAIL_EXISTS\",\"domain\":\"global\","
+                + "\"reason\":\"invalid\"}]}}";
+
+        FirebaseAuthApi.AuthResponse parseada = FirebaseErrors.parsearAuth(jsonError);
+
+        assertNotNull("Debe poder parsearse el JSON de error", parseada);
+        assertNotNull("Debe leerse la estructura de error", parseada.error);
+        assertEquals("EMAIL_EXISTS", parseada.error.message);
+    }
+
+    @Test
+    public void elMensajeCrudoNoVuelcaUnHtmlEnorme() {
+        // Un proxy puede devolver HTML: no debe romper ni llenar la pantalla.
+        String html = "<html><body>" + "x".repeat(500) + "</body></html>";
+        String crudo = FirebaseErrors.mensajeCrudo(html);
+        assertNotNull(crudo);
+        assertFalse("No debe quedar vacío", crudo.trim().isEmpty());
+        assertTrue("No debe volcar un HTML entero", crudo.length() <= 200);
+    }
+
+    @Test
+    public void elMensajeCrudoEsVacioConCuerpoNuloOVacio() {
+        assertEquals("", FirebaseErrors.mensajeCrudo(null));
+        assertEquals("", FirebaseErrors.mensajeCrudo("   "));
+    }
+
+    @Test
+    public void elDiagnosticoDeFirestoreExplicaQueLaBaseNoExiste() {
+        // Éste es EXACTAMENTE el error del proyecto real: hay que decir "crea la base
+        // de datos", no un 404 a secas.
+        String json = "{\"error\":{\"code\":404,\"message\":\"The database (default) "
+                + "does not exist for project demo Please visit ...\","
+                + "\"status\":\"NOT_FOUND\"}}";
+        String mensaje = FirebaseErrors.describirErrorFirestore(404, json);
+        String minus = mensaje.toLowerCase(java.util.Locale.ROOT);
+        assertTrue("Debe decir que la base no está creada: " + mensaje,
+                minus.contains("no est"));
+        assertTrue("Debe indicar cómo crearla", minus.contains("firestore"));
+    }
+
+    @Test
+    public void elDiagnosticoDeFirestoreExplicaLasReglasDeSeguridad() {
+        String json = "{\"error\":{\"code\":403,\"message\":\"Missing or insufficient "
+                + "permissions.\",\"status\":\"PERMISSION_DENIED\"}}";
+        String mensaje = FirebaseErrors.describirErrorFirestore(403, json);
+        assertTrue("Debe hablar de las reglas: " + mensaje,
+                mensaje.toLowerCase(java.util.Locale.ROOT).contains("reglas"));
+    }
+
+    @Test
+    public void lasRutasConDosPuntosUsanPrefijoParaEvitarMalformedUrl() {
+        // BUG REAL corregido: Retrofit resuelve la ruta con las reglas de java.net.URI
+        // y "accounts:signInWithPassword" se interpreta como un ESQUEMA ("accounts:"),
+        // produciendo "Malformed URL" antes de salir a la red. El prefijo "./" fuerza
+        // a tratarlo como ruta relativa.
+        String auth = leerFuente(
+                "src/main/java/com/tuempresa/citasmedicas/data/firebase/FirebaseAuthApi.java",
+                "app/src/main/java/com/tuempresa/citasmedicas/data/firebase/FirebaseAuthApi.java");
+        assertFalse("Debe poder leerse el fuente de la API de Auth", auth.isEmpty());
+        assertTrue("El login debe declararse con prefijo ./",
+                auth.contains("@POST(\"./accounts:signInWithPassword\")"));
+        assertTrue("El registro debe declararse con prefijo ./",
+                auth.contains("@POST(\"./accounts:signUp\")"));
+
+        String firestore = leerFuente(
+                "src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreApi.java",
+                "app/src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreApi.java");
+        assertFalse("Debe poder leerse el fuente de la API de Firestore", firestore.isEmpty());
+        assertTrue("runQuery también necesita el prefijo",
+                firestore.contains("@POST(\"./{collection}:runQuery\")"));
+    }
+
+    /** Lee un archivo fuente probando las dos raíces posibles del directorio de trabajo. */
+    private String leerFuente(String rutaApp, String rutaRaiz) {
+        java.io.File f = new java.io.File(rutaApp);
+        if (!f.exists()) {
+            f = new java.io.File(rutaRaiz);
+        }
+        try {
+            return new String(java.nio.file.Files.readAllBytes(f.toPath()),
+                    java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            return "";
+        }
+    }
+
+    // ─────────────── Degradación segura de Auth ───────────────
+
+    @Test
+    public void elAuthSoloDegradaAnteProblemasDeConfiguracion() {
+        assertTrue("CONFIGURATION_NOT_FOUND es un problema de configuración",
+                FirebaseAuthFallback.esProblemaDeConfiguracion(
+                        "Firebase Authentication no está configurado en el proyecto. "
+                                + "Actívalo en Firebase Console"));
+
+        assertTrue("El proveedor deshabilitado también lo es",
+                FirebaseAuthFallback.esProblemaDeConfiguracion(
+                        "El acceso con email/contraseña está deshabilitado en Firebase Console"));
+
+        assertTrue("Una clave de otro proyecto también",
+                FirebaseAuthFallback.esProblemaDeConfiguracion(
+                        "La clave de Firebase no es válida para este proyecto. "
+                                + "Revisa FIREBASE_API_KEY"));
+    }
+
+    @Test
+    public void elAuthNoDegradaConCredencialesIncorrectasNiConFallosDeRed() {
+        // Crítico: si degradara aquí, se podría entrar con cualquier contraseña.
+        assertFalse("Contraseña incorrecta NO debe degradar al modo local",
+                FirebaseAuthFallback.esProblemaDeConfiguracion("La contraseña no es correcta"));
+
+        assertFalse("Correo inexistente NO debe degradar",
+                FirebaseAuthFallback.esProblemaDeConfiguracion(
+                        "No hay ninguna cuenta con ese correo"));
+
+        assertFalse("Correo ya registrado NO debe degradar",
+                FirebaseAuthFallback.esProblemaDeConfiguracion(
+                        "Ya existe una cuenta con ese correo"));
+
+        assertFalse("Sin internet NO debe degradar (daría una sesión falsa)",
+                FirebaseAuthFallback.esProblemaDeConfiguracion(
+                        "Sin conexión a internet. Revisa tu red e inténtalo de nuevo"));
+
+        assertFalse("Un mensaje nulo no debe degradar",
+                FirebaseAuthFallback.esProblemaDeConfiguracion(null));
+    }
+
+    /** Espera activa a que se cumpla una condición (las llamadas son asíncronas). */
+    private void esperar(java.util.function.BooleanSupplier condicion) {
+        long fin = System.currentTimeMillis() + 3000;
+        while (System.currentTimeMillis() < fin) {
+            org.robolectric.shadows.ShadowLooper.idleMainLooper();
+            if (condicion.getAsBoolean()) {
+                return;
+            }
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+        org.robolectric.shadows.ShadowLooper.idleMainLooper();
     }
 }

@@ -58,8 +58,14 @@ public interface FirestoreApi {
      * <p>
      * Se usa {@code :runQuery} sobre la base de la colección. Permite filtrar sin
      * necesitar índices compuestos si sólo hay una igualdad.
+     * <p>
+     * <b>El prefijo {@code ./} es obligatorio.</b> Retrofit resuelve la ruta con las
+     * reglas de {@code java.net.URI}: un segmento con dos puntos ({@code docs:runQuery})
+     * se interpretaría como <i>esquema</i> de URI y la llamada fallaría con
+     * <i>"Malformed URL"</i> antes de salir a la red. Con {@code ./} se fuerza a que
+     * sea una ruta relativa a la URL base.
      */
-    @POST("{collection}:runQuery")
+    @POST("./{collection}:runQuery")
     Call<List<QueryResult>> runQuery(@Path("collection") String collection,
                                      @NonNull @Body QueryRequest body);
 

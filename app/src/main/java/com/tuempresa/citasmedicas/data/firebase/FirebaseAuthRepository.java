@@ -1,6 +1,7 @@
 package com.tuempresa.citasmedicas.data.firebase;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.tuempresa.citasmedicas.domain.repository.IAuthRepository;
 import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
@@ -44,6 +45,17 @@ public class FirebaseAuthRepository implements IAuthRepository {
     private static final String TAG_ERROR_TOO_MANY = "TOO_MANY_ATTEMPTS_TRY_LATER";
     private static final String TAG_ERROR_OPERATION_NOT_ALLOWED = "OPERATION_NOT_ALLOWED";
     private static final String TAG_ERROR_API_KEY = "API key not valid";
+    /**
+     * Firebase devuelve este código cuando el proyecto no tiene el proveedor de
+     * email/contraseña habilitado, o cuando la configuración de Authentication
+     * todavía no se ha creado en el proyecto.
+     */
+    private static final String TAG_ERROR_CONFIG_NOT_FOUND = "CONFIGURATION_NOT_FOUND";
+    /** La API Key no pertenece a este proyecto o está restringida. */
+    private static final String TAG_ERROR_API_KEY_INVALID = "API_KEY_INVALID";
+    /** El proveedor está desactivado en Firebase Console. */
+    private static final String TAG_ERROR_ADMIN_ONLY = "ADMIN_ONLY_OPERATION";
+    private static final String TAG_ERROR_UNAUTHORIZED = "UNAUTHORIZED_DOMAIN";
 
     private final FirebaseAuthApi api;
 
@@ -84,7 +96,12 @@ public class FirebaseAuthRepository implements IAuthRepository {
                         if (response.isSuccessful() && response.body() != null) {
                             callback.onSuccess(toUser(response.body(), request));
                         } else {
-                            callback.onError(traducirError(response.body(), false));
+                            // En un HTTP 4xx Retrofit deja body() a null: el JSON del
+                            // error está en errorBody(). Sin esto se perdía el motivo.
+                            FirebaseAuthApi.AuthResponse cuerpo =
+                                    FirebaseErrors.leerRespuestaAuth(response);
+                            callback.onError(traducirError(cuerpo, false,
+                                    FirebaseErrors.cuerpoDeError(response)));
                         }
                     }
 
@@ -117,7 +134,10 @@ public class FirebaseAuthRepository implements IAuthRepository {
                         if (response.isSuccessful() && response.body() != null) {
                             callback.onSuccess(toUser(response.body(), request));
                         } else {
-                            callback.onError(traducirError(response.body(), true));
+                            FirebaseAuthApi.AuthResponse cuerpo =
+                                    FirebaseErrors.leerRespuestaAuth(response);
+                            callback.onError(traducirError(cuerpo, true,
+                                    FirebaseErrors.cuerpoDeError(response)));
                         }
                     }
 
@@ -181,12 +201,17 @@ public class FirebaseAuthRepository implements IAuthRepository {
     /**
      * Traduce el error de Firebase a un mensaje en español.
      *
+     * @param body       cuerpo ya parseado (puede ser {@code null})
      * @param esRegistro {@code true} si la operación era crear cuenta
+     * @param jsonCrudo  texto del {@code errorBody()}, por si el parseo no lo capturó
      */
     @NonNull
-    private String traducirError(@NonNull FirebaseAuthApi.AuthResponse body,
-                                 boolean esRegistro) {
-        String crudo = extraerMensajeError(body);
+    private String traducirError(@Nullable FirebaseAuthApi.AuthResponse body,
+                                 boolean esRegistro,
+                                 @Nullable String jsonCrudo) {
+        String crudo = body != null && body.error != null && body.error.message != null
+                ? body.error.message
+                : FirebaseErrors.mensajeCrudo(jsonCrudo);
         if (crudo.contains(TAG_ERROR_EMAIL_EXISTS)) {
             return "Ya existe una cuenta con ese correo";
         }
@@ -208,6 +233,17 @@ public class FirebaseAuthRepository implements IAuthRepository {
         if (crudo.contains(TAG_ERROR_OPERATION_NOT_ALLOWED)) {
             return "El acceso con email/contraseña está deshabilitado en Firebase Console";
         }
+        if (crudo.contains(TAG_ERROR_CONFIG_NOT_FOUND)) {
+            return "Firebase Authentication no está configurado en el proyecto. "
+                    + "Actívalo en Firebase Console → Authentication → Correo electrónico";
+        }
+        if (crudo.contains(TAG_ERROR_API_KEY_INVALID)) {
+            return "La clave de Firebase no es válida para este proyecto. "
+                    + "Revisa FIREBASE_API_KEY";
+        }
+        if (crudo.contains(TAG_ERROR_ADMIN_ONLY) || crudo.contains(TAG_ERROR_UNAUTHORIZED)) {
+            return "La operación no está permitida con la configuración actual de Firebase";
+        }
         if (crudo.contains(TAG_ERROR_API_KEY)) {
             return "La clave de Firebase no es válida. Revisa FIREBASE_API_KEY";
         }
@@ -217,14 +253,6 @@ public class FirebaseAuthRepository implements IAuthRepository {
                     : "No se pudo iniciar sesión. Inténtalo de nuevo";
         }
         return crudo;
-    }
-
-    @NonNull
-    private String extraerMensajeError(@NonNull FirebaseAuthApi.AuthResponse body) {
-        if (body == null || body.error == null || body.error.message == null) {
-            return "";
-        }
-        return body.error.message;
     }
 
     /** Mensaje para fallos de red (sin conexión, DNS, timeout...). */

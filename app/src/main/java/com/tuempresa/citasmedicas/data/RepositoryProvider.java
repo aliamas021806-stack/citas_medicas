@@ -4,9 +4,11 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 
+import com.tuempresa.citasmedicas.data.firebase.FirebaseAuthFallback;
 import com.tuempresa.citasmedicas.data.firebase.FirebaseAuthRepository;
 import com.tuempresa.citasmedicas.data.firebase.FirebaseConfig;
 import com.tuempresa.citasmedicas.data.firebase.FirestoreDoctorRepository;
+import com.tuempresa.citasmedicas.data.firebase.FirestoreFallback;
 import com.tuempresa.citasmedicas.data.firebase.FirestorePatientRepository;
 import com.tuempresa.citasmedicas.data.repository.AppointmentRepository;
 import com.tuempresa.citasmedicas.data.repository.AuthRepository;
@@ -67,11 +69,18 @@ public final class RepositoryProvider {
      * <p>
      * Con Firebase configurado se usa {@link FirebaseAuthRepository} (REST de
      * Identity Toolkit). Si no, la validación local simulada de siempre.
+     * <p>
+     * <b>Degradación segura.</b> El remoto va envuelto en
+     * {@link FirebaseAuthFallback}, que sólo recurre a la validación local si Firebase
+     * indica un <i>problema de configuración</i> (proveedor de email sin activar, clave
+     * de otro proyecto). Ante una contraseña incorrecta o un fallo de red propaga el
+     * error: nunca se regala una sesión.
      */
     @NonNull
     public static IAuthRepository auth(@NonNull Context context) {
         if (FirebaseConfig.isEnabled()) {
-            return new FirebaseAuthRepository();
+            return FirebaseAuthFallback.wrap(new FirebaseAuthRepository(),
+                    new AuthRepository());
         }
         return new AuthRepository();
     }
@@ -82,20 +91,34 @@ public final class RepositoryProvider {
      * Con Firebase se leen las colecciones {@code doctors} y {@code specialties}.
      * Los <b>horarios disponibles</b> se siguen resolviendo localmente (no se migran
      * en esta fase), por eso el repositorio remoto recibe el local como respaldo.
+     * <p>
+     * <b>Respaldo automático.</b> El remoto va envuelto en {@link FirestoreFallback}:
+     * si Firestore responde con error (base sin crear, reglas, sin red, cuota) o
+     * devuelve una colección vacía, se sirven los datos locales. Así una incidencia
+     * en la nube no deja las pantallas en blanco: se nota en el log y en el chip de
+     * Perfil, pero la app sigue siendo demostrable.
      */
     @NonNull
     public static IDoctorRepository doctors() {
         if (FirebaseConfig.isEnabled()) {
-            return new FirestoreDoctorRepository(new DoctorRepository());
+            return FirestoreFallback.doctors(
+                    new FirestoreDoctorRepository(new DoctorRepository()),
+                    new DoctorRepository());
         }
         return new DoctorRepository();
     }
 
-    /** Pacientes y su expediente. */
+    /**
+     * Pacientes y su expediente.
+     * <p>
+     * Igual que el catálogo: Firestore con respaldo local automático.
+     */
     @NonNull
     public static IPatientRepository patients() {
         if (FirebaseConfig.isEnabled()) {
-            return new FirestorePatientRepository();
+            return FirestoreFallback.patients(
+                    new FirestorePatientRepository(),
+                    new PatientRepository());
         }
         return new PatientRepository();
     }

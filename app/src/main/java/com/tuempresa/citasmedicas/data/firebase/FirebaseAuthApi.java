@@ -25,13 +25,22 @@ import retrofit2.http.Query;
  */
 public interface FirebaseAuthApi {
 
-    /** Inicia sesión con email + contraseña. */
-    @POST("accounts:signInWithPassword")
+    /**
+     * Inicia sesión con email + contraseña.
+     * <p>
+     * <b>Por qué el prefijo {@code ./}.</b> Retrofit resuelve la ruta relativa contra
+     * la URL base siguiendo las reglas de {@code java.net.URI}. Una ruta que contiene
+     * dos puntos ({@code accounts:signInWithPassword}) se interpreta como un
+     * <i>esquema</i> de URI ("accounts:"), y la petición falla con
+     * <i>"Malformed URL"</i> sin llegar a la red. Al empezar por {@code ./} se
+     * garantiza que se trate como ruta relativa y se concatene a la base.
+     */
+    @POST("./accounts:signInWithPassword")
     Call<AuthResponse> signInWithPassword(@Query("key") String apiKey,
                                           @NonNull @Body AuthPayload body);
 
-    /** Crea una cuenta nueva con email + contraseña. */
-    @POST("accounts:signUp")
+    /** Crea una cuenta nueva con email + contraseña (mismo motivo para el {@code ./}). */
+    @POST("./accounts:signUp")
     Call<AuthResponse> signUp(@Query("key") String apiKey,
                               @NonNull @Body AuthPayload body);
 

@@ -1,6 +1,7 @@
 package com.tuempresa.citasmedicas.data.firebase;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.tuempresa.citasmedicas.domain.repository.IPatientRepository;
 import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
@@ -41,7 +42,8 @@ public class FirestorePatientRepository implements IPatientRepository {
                             }
                             callback.onSuccess(lista);
                         } else {
-                            callback.onError(mensajeDeError(response.code()));
+                            callback.onError(mensajeDeError(response.code(),
+                                    FirebaseErrors.cuerpoDeError(response)));
                         }
                     }
 
@@ -70,7 +72,8 @@ public class FirestorePatientRepository implements IPatientRepository {
                             }
                             callback.onSuccess(p);
                         } else {
-                            callback.onError(mensajeDeError(response.code()));
+                            callback.onError(mensajeDeError(response.code(),
+                                    FirebaseErrors.cuerpoDeError(response)));
                         }
                     }
 
@@ -82,8 +85,19 @@ public class FirestorePatientRepository implements IPatientRepository {
                 });
     }
 
+    /**
+     * Mensaje de error con el motivo real de Google.
+     * <p>
+     * Se lee {@code errorBody()} porque en un HTTP 4xx Retrofit deja {@code body()}
+     * a {@code null}: sin eso se perdía el detalle ("database does not exist",
+     * "insufficient permissions") y sólo se mostraba el número.
+     */
     @NonNull
-    private String mensajeDeError(int httpCode) {
+    private String mensajeDeError(int httpCode, @Nullable String jsonError) {
+        String detalle = FirebaseErrors.describirErrorFirestore(httpCode, jsonError);
+        if (!detalle.isEmpty() && !detalle.equals(jsonError == null ? "" : jsonError.trim())) {
+            return detalle;
+        }
         switch (httpCode) {
             case 401:
             case 403:

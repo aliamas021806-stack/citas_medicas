@@ -56,6 +56,13 @@ public class PantallasArrancanTest {
 
     @Before
     public void setUp() {
+        // Los tests de UI deben ser deterministas: si la máquina tiene credenciales de
+        // Firebase en local.properties, el login intentaría una petición real de red.
+        // Se fuerza el modo local (validación simulada + datos simulados), que es el
+        // mismo que usa la CI y el APK que se entrega.
+        com.tuempresa.citasmedicas.data.firebase.FirebaseConfig.setEnabledForTesting(false);
+        com.tuempresa.citasmedicas.data.firebase.FirestoreClient.reset();
+
         session = SessionManager.getInstance(ApplicationProvider.getApplicationContext());
         session.logout();
     }
@@ -63,6 +70,8 @@ public class PantallasArrancanTest {
     @After
     public void tearDown() {
         session.logout();
+        // Restaurar el comportamiento real para el resto de clases de test.
+        com.tuempresa.citasmedicas.data.firebase.FirebaseConfig.setEnabledForTesting(null);
     }
 
     private void iniciarSesion() {

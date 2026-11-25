@@ -28,6 +28,8 @@ import com.tuempresa.citasmedicas.model.AppointmentStatus;
 import com.tuempresa.citasmedicas.model.Doctor;
 import com.tuempresa.citasmedicas.model.Specialty;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -67,6 +69,28 @@ public class FaseCeroArquitecturaTest {
 
     @Rule
     public InstantTaskExecutorRule instantTaskExecutorRule = new InstantTaskExecutorRule();
+
+    /**
+     * Estos tests comprueban el contrato de arquitectura, no la conexión real.
+     * <p>
+     * Se fuerza el modo local para que el resultado no dependa de si la máquina tiene
+     * {@code local.properties} con credenciales: en ese caso
+     * {@code RepositoryProvider.auth()} devolvería el repositorio REST y el test
+     * intentaría salir a la red, con lo que dejaría de ser determinista.
+     * <p>
+     * La coherencia del interruptor en ambos estados se verifica aparte, en
+     * {@code FirebaseRestTest}.
+     */
+    @Before
+    public void forzarModoLocal() {
+        com.tuempresa.citasmedicas.data.firebase.FirebaseConfig.setEnabledForTesting(false);
+        com.tuempresa.citasmedicas.data.firebase.FirestoreClient.reset();
+    }
+
+    @After
+    public void restaurarInterruptor() {
+        com.tuempresa.citasmedicas.data.firebase.FirebaseConfig.setEnabledForTesting(null);
+    }
 
     private Context context() {
         return RuntimeEnvironment.getApplication();
@@ -162,11 +186,27 @@ public class FaseCeroArquitecturaTest {
         assertNotNull(auth);
         assertNotNull(citas);
 
-        // Deben ser las implementaciones locales actuales
-        assertTrue(doctores instanceof DoctorRepository);
-        assertTrue(pacientes instanceof PatientRepository);
-        assertTrue(auth instanceof AuthRepository);
-        assertTrue(citas instanceof AppointmentRepository);
+        // Las citas SIEMPRE son locales: Room es la fuente de verdad de la UI.
+        assertTrue("Las citas deben seguir viniendo de Room, con o sin Firebase",
+                citas instanceof AppointmentRepository);
+
+        // El catálogo y la autenticación dependen del interruptor. Lo que importa es
+        // que la elección sea coherente y que siempre haya algo usable (nunca null),
+        // no que en todos los entornos sea la implementación simulada.
+        boolean firebase = RepositoryProvider.isUsingFirebase();
+        if (firebase) {
+            assertFalse("Con Firebase no debe usarse el mock directo de doctores",
+                    doctores instanceof DoctorRepository);
+            assertFalse("Con Firebase no debe usarse el mock directo de pacientes",
+                    pacientes instanceof PatientRepository);
+            assertFalse("Con Firebase no debe usarse la validación local directa",
+                    auth instanceof AuthRepository);
+        } else {
+            assertTrue("Sin Firebase deben usarse las implementaciones locales",
+                    doctores instanceof DoctorRepository);
+            assertTrue(pacientes instanceof PatientRepository);
+            assertTrue(auth instanceof AuthRepository);
+        }
     }
 
     @Test
