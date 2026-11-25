@@ -7,13 +7,16 @@ Uso:
     python3 tools/configurar_firebase.py ruta/al/google-services.json
     python3 tools/configurar_firebase.py          # busca el archivo automáticamente
 
+También acepta los datos a mano (sin google-services.json):
+    python3 tools/configurar_firebase.py --project mi-proyecto --key AIzaSy...
+
 Comprueba además que el package_name del JSON coincide con el de la app, que es la
 causa número uno de que Firebase "no conecte" sin dar un error claro.
 """
 
+import argparse
 import json
 import os
-import re
 import sys
 import pathlib
 
@@ -113,10 +116,44 @@ def main():
     print(" Configurador de Firebase para Citas Médicas")
     print("=" * 62)
 
-    ruta = sys.argv[1] if len(sys.argv) > 1 else buscar_json()
+    parser = argparse.ArgumentParser(
+        description="Escribe las credenciales de Firebase en local.properties.")
+    parser.add_argument("json", nargs="?", help="Ruta a google-services.json")
+    parser.add_argument("--project", help="Project ID (si no hay google-services.json)")
+    parser.add_argument("--key", help="API Key (si no hay google-services.json)")
+    parser.add_argument("--app-id", default="", help="App ID de Android (opcional)")
+    parser.add_argument("--sender-id", default="", help="Project number (opcional)")
+    args = parser.parse_args()
+
+    # ── Modo manual: los datos vienen por argumento ─────────────────
+    if args.project or args.key:
+        if not args.project or not args.key:
+            print("\n[ERROR] En modo manual hacen falta los dos datos:")
+            print("        --project TU_PROJECT_ID --key TU_API_KEY")
+            return 1
+
+        clave = args.key.strip()
+        if not clave.startswith("AIza"):
+            print("\n[AVISO] La API Key de Firebase suele empezar por 'AIza'.")
+            print(f"        La tuya empieza por '{clave[:6]}'. Revísala si falla.")
+
+        valores = {
+            "project_id": args.project.strip(),
+            "api_key": clave,
+            "app_id": args.app_id.strip(),
+            "package_name": PAQUETE_APP,
+            "sender_id": args.sender_id.strip(),
+        }
+        print("\nModo manual (sin google-services.json)")
+        return rematar(valores)
+
+    # ── Modo JSON ───────────────────────────────────────────────────
+    ruta = args.json if args.json else buscar_json()
     if not ruta or not os.path.isfile(ruta):
         print("\n[ERROR] No encuentro google-services.json.")
-        print("        Uso: python3 tools/configurar_firebase.py ruta/al/archivo.json")
+        print("        Opciones:")
+        print("          python3 tools/configurar_firebase.py ruta/al/archivo.json")
+        print("          python3 tools/configurar_firebase.py --project ID --key API_KEY")
         return 1
 
     print(f"\nLeyendo: {ruta}")
@@ -147,7 +184,11 @@ def main():
             print("  x", e)
         return 1
 
-    # ── Resumen ─────────────────────────────────────────────────────
+    return rematar(valores)
+
+
+def rematar(valores):
+    """Muestra el resumen, escribe local.properties y da el siguiente paso."""
     print("\nDatos encontrados:")
     print(f"  Project ID : {valores['project_id']}")
     print(f"  API Key    : {valores['api_key'][:8]}...{valores['api_key'][-4:]} "
@@ -159,7 +200,9 @@ def main():
 
     print(f"\n[OK] Escrito en {os.path.abspath(NOMBRE_PROPIEDADES)}")
     print("     (este archivo está en .gitignore: no se sube a GitHub)")
-    print("\nSiguiente paso:")
+    print("\nSiguiente paso — comprobar que la base responde:")
+    print("     python3 tools/verificar_firebase.py")
+    print("\nY después compilar:")
     print("     ./gradlew assembleDebug")
     print("\nLa app detectará las credenciales y usará Firebase automáticamente.")
     print("Si borras esas líneas de local.properties, vuelve al modo mock.")

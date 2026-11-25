@@ -333,6 +333,19 @@ a hoy). En la pantalla de **Perfil** aparece un chip que indica el origen de dat
 
 👉 Guía paso a paso con los datos necesarios: **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**
 
+**Herramientas incluidas** (no necesitan instalar nada, solo Python 3):
+
+| Comando | Para qué sirve |
+|---|---|
+| `python3 tools/configurar_firebase.py ruta/google-services.json` | Extrae las credenciales del archivo y las guarda en `local.properties` (valida el `package_name`) |
+| `python3 tools/configurar_firebase.py --project ID --key API_KEY` | Misma cosa, pero escribiendo los 2 datos a mano |
+| `python3 tools/verificar_firebase.py` | **Prueba la conexión** y lista las colecciones y los campos reales de tu Firestore |
+
+`tools/verificar_firebase.py` es el que responde a "¿está bien conectada mi base de
+datos?" sin compilar nada: consulta el proyecto, dice si responde y traduce cada
+error de Google (403 de reglas, 403 de clave, 404, proyecto inexistente) a un paso
+concreto en español.
+
 #### Pendiente (Fase 3)
 
 - [ ] **Citas en Firestore:** no se sustituye `AppointmentRepository`. Añadir un

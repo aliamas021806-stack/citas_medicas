@@ -9,6 +9,74 @@ Firebase, y **dónde encontrarlos**. Son 3 datos (uno opcional).
 
 ---
 
+## 🚀 "No sé cómo dártelo" → 3 formas, de más fácil a más manual
+
+### Forma 1 — Adjunta el archivo (10 segundos) ⭐ la más fácil
+
+Descarga el archivo **`google-services.json`** de tu proyecto y **adjúntalo a la
+conversación**, como adjuntarías una foto. Yo hago todo lo demás.
+
+**Cómo descargarlo:**
+
+1. Entra en **https://console.firebase.google.com/**
+2. Elige tu proyecto (el que ya creaste con la base de datos).
+3. Arriba a la izquierda, pulsa el **engranaje ⚙️** → **Configuración del proyecto**.
+4. Baja hasta **"Tus apps"**. Si no ves ninguna app, pulsa el icono **Android** y
+   registra el paquete `com.tuempresa.citasmedicas` (tarda 20 segundos).
+5. En la app Android, pulsa **"google-services.json"** → se descarga.
+
+Luego en el chat: **arrastra ese archivo** o usa el botón de adjuntar. Fin.
+
+### Forma 2 — Cópialo del archivo tú mismo (1 minuto)
+
+Abre el `google-services.json` con el Bloc de notas y busca estas dos líneas:
+
+```json
+"project_id": "citas-medicas-4f3a1",     ← dato 1
+"current_key": "AIzaSyB1x..."            ← dato 2
+```
+
+Pégamelas en el chat tal cual. Con eso ya conecta.
+
+### Forma 3 — Verifica tú mismo y me pasas la salida (recomendada si quieres ver qué hay)
+
+Ya tienes un script listo en el proyecto que **consulta tu base de datos, dice si
+responde, y lista las colecciones y los campos reales** de cada una:
+
+```bash
+# Opción interactiva: primero guarda los datos
+python3 tools/configurar_firebase.py ruta/a/tu/google-services.json
+
+# Y luego comprueba la conexión
+python3 tools/verificar_firebase.py
+```
+
+O directamente, sin escribir archivos:
+
+```bash
+python3 tools/verificar_firebase.py --project TU_PROJECT_ID --key TU_API_KEY
+```
+
+La salida te dice exactamente en qué estado está todo:
+
+```
+[1/2] Consultando la base de datos...
+  HTTP 200  →  la base de datos EXISTE y responde
+  Colecciones encontradas: 3
+
+[2/2] Leyendo los campos reales de cada colección...
+
+  doctors  (3 documento(s) de muestra)
+      fullName               stringValue
+      specialtyName          stringValue
+      rating                 doubleValue
+```
+
+**Pégame esa salida** y yo ajusto el mapeo a tus campos reales. Si sale un error
+(403, 404, clave no válida), el script **ya te dice qué hacer** — y me lo pegas igual.
+
+---
+
 ## 📋 Los 3 datos que necesito
 
 | # | Dato | Ejemplo | ¿Obligatorio? |
