@@ -40,6 +40,11 @@ public class MainActivity extends AppCompatActivity {
 
         if (savedInstanceState == null) {
             bottomNav.setSelectedItemId(R.id.nav_doctors);
+        } else {
+            // Tras rotar, el FragmentManager restaura el fragmento y la selección del
+            // menú, pero NO el título de la toolbar: se quedaría con el nombre de la
+            // app hasta que el usuario tocara otra pestaña.
+            toolbar.setTitle(Navigator.titleForTab(bottomNav.getSelectedItemId()));
         }
     }
 

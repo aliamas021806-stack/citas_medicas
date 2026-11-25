@@ -5,9 +5,12 @@ import com.tuempresa.citasmedicas.model.Patient;
 import com.tuempresa.citasmedicas.model.Specialty;
 import com.tuempresa.citasmedicas.model.TimeSlot;
 
+import androidx.annotation.NonNull;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -26,8 +29,31 @@ public final class MockData {
         // Clase utilitaria
     }
 
-    public static final SimpleDateFormat DATE_FORMAT =
-            new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+    /**
+     * Patrón de fecha interno de la app. Se expone para que quien necesite
+     * formatear o parsear use SU PROPIA instancia de {@link SimpleDateFormat}
+     * con este patrón.
+     * <p>
+     * <b>No hay ninguna instancia compartida:</b> {@code SimpleDateFormat} no es
+     * thread-safe y aquí conviven tres hilos (hilo principal, hilo de OkHttp
+     * dentro del {@code MockInterceptor} y {@code databaseWriteExecutor} de Room).
+     * Compartir una instancia producía fechas corruptas de forma intermitente.
+     */
+    public static final String DATE_PATTERN = "yyyy-MM-dd";
+
+    /** Crea un formateador nuevo (nunca compartido) con el patrón interno fijo. */
+    public static SimpleDateFormat newDateFormatter() {
+        // Locale.US a propósito: el patrón es interno, no se muestra al usuario.
+        return new SimpleDateFormat(DATE_PATTERN, Locale.US);
+    }
+
+    /**
+     * Formatea una fecha con una instancia local. Equivale a usar
+     * {@link #newDateFormatter()}, pero centralizado para no repetir el patrón.
+     */
+    private static String formatDate(@NonNull Date date) {
+        return newDateFormatter().format(date);
+    }
 
     // =====================================================================
     // ESPECIALIDADES
@@ -190,7 +216,7 @@ public final class MockData {
                 cal.add(Calendar.DAY_OF_MONTH, 1);
                 continue;
             }
-            String date = DATE_FORMAT.format(cal.getTime());
+            String date = formatDate(cal.getTime());
             int i = 0;
             for (String hour : hours) {
                 boolean available = ((day * 7 + i) % 4) != 0;
@@ -223,7 +249,7 @@ public final class MockData {
         cal.set(Calendar.MILLISECOND, 0);
         for (int day = 0; day < 10 && dates.size() < 7; day++) {
             if (cal.get(Calendar.DAY_OF_WEEK) != Calendar.SUNDAY) {
-                dates.add(DATE_FORMAT.format(cal.getTime()));
+                dates.add(formatDate(cal.getTime()));
             }
             cal.add(Calendar.DAY_OF_MONTH, 1);
         }

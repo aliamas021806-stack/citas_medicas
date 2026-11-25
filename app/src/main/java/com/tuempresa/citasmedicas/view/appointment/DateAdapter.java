@@ -123,7 +123,8 @@ public class DateAdapter extends RecyclerView.Adapter<DateAdapter.DateViewHolder
 
         private Date parse(String date) {
             try {
-                SimpleDateFormat sdf = new SimpleDateFormat(MockData.DATE_FORMAT.toPattern(), Locale.getDefault());
+                // Instancia propia: MockData ya no expone un SimpleDateFormat compartido.
+                SimpleDateFormat sdf = new SimpleDateFormat(MockData.DATE_PATTERN, Locale.getDefault());
                 return sdf.parse(date);
             } catch (ParseException e) {
                 return null;

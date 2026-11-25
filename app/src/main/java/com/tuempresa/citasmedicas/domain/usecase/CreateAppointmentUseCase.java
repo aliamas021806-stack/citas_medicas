@@ -56,7 +56,13 @@ public class CreateAppointmentUseCase extends UseCase<Appointment, Long> {
      * @return {@code null} si es válida; en caso contrario, el motivo.
      */
     @Nullable
-    static String validate(@Nullable Appointment appointment) {
+    /**
+     * Regla de validación de una cita, expuesta para que la vista pueda avisar
+     * antes de enviar y para poder probarla sin tocar Room.
+     *
+     * @return el mensaje de error, o {@code null} si la cita es válida.
+     */
+    public static String validate(@Nullable Appointment appointment) {
         if (appointment == null) {
             return "No hay datos de la cita";
         }
@@ -81,15 +87,20 @@ public class CreateAppointmentUseCase extends UseCase<Appointment, Long> {
         return null;
     }
 
-    /** Compara la fecha (yyyy-MM-dd) con hoy usando un formato fijo, sin zonas horarias. */
+    /**
+     * Compara la fecha (yyyy-MM-dd) con hoy.
+     * <p>
+     * Se comparan cadenas en orden lexicográfico en lugar de usar
+     * {@code java.time.LocalDate}: con el formato ISO {@code yyyy-MM-dd} el orden
+     * alfabético ES el orden cronológico, así que el resultado es idéntico y la
+     * capa de dominio deja de depender de una API que en Android necesita
+     * desugaring. El formato ya viene validado por el llamador.
+     */
     private static boolean isPast(@NonNull String date) {
-        try {
-            java.time.LocalDate target = java.time.LocalDate.parse(date);
-            return target.isBefore(java.time.LocalDate.now());
-        } catch (Exception e) {
-            // Si no se puede interpretar, la validación de formato ya lo habrá rechazado.
-            return false;
-        }
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(
+                "yyyy-MM-dd", java.util.Locale.US);
+        String today = sdf.format(new java.util.Date());
+        return date.compareTo(today) < 0;
     }
 
     private static boolean isBlank(@Nullable String value) {
