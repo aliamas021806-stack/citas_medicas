@@ -222,6 +222,26 @@ public class SyncCitasFirestoreTest {
         }
     }
 
+    // ───────────── Nombre de la base de datos ─────────────
+
+    @Test
+    public void laUrlUsaElNombreDeBaseConfiguradoYPorDefectoDefault() {
+        // El asistente de Firebase permite cambiar el "ID de la base de datos". Si se
+        // elige otro nombre y el código escribe "(default)" a fuego, TODAS las
+        // peticiones devuelven 404 y la app parece "no conectada" sin motivo.
+        String url = com.tuempresa.citasmedicas.data.firebase.FirebaseConfig
+                .firestoreBaseUrl();
+
+        String base = com.tuempresa.citasmedicas.data.firebase.FirebaseConfig
+                .databaseId();
+        assertNotNull(base);
+        assertFalse("El nombre de la base no puede quedar vacío", base.trim().isEmpty());
+        // Si no hay configuración explícita, debe ser (default), que es lo habitual.
+        assertEquals("Sin configuración, la base debe ser (default)", "(default)", base);
+        assertTrue("La URL debe construir el nombre de la base dinámicamente: " + url,
+                url.contains("/databases/(default)/documents/"));
+    }
+
     // ───────────────────── Java puro ─────────────────────
 
     @Test

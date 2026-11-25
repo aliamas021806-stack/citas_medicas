@@ -72,16 +72,17 @@ def peticion(url, cuerpo=None):
         return 0, f"Error inesperado: {e}"
 
 
-def listar_colecciones(project_id, api_key):
+def listar_colecciones(project_id, api_key, database_id="(default)"):
     url = ("https://firestore.googleapis.com/v1/projects/" + project_id
-           + "/databases/(default)/documents:listCollectionIds?key=" + api_key)
+           + "/databases/" + database_id
+           + "/documents:listCollectionIds?key=" + api_key)
     return peticion(url, cuerpo={})
 
 
-def listar_documentos(project_id, api_key, coleccion):
+def listar_documentos(project_id, api_key, coleccion, database_id="(default)"):
     url = ("https://firestore.googleapis.com/v1/projects/" + project_id
-           + "/databases/(default)/documents/" + coleccion + "?key=" + api_key
-           + "&pageSize=3")
+           + "/databases/" + database_id + "/documents/" + coleccion
+           + "?key=" + api_key + "&pageSize=3")
     return peticion(url)
 
 
@@ -193,11 +194,14 @@ def main():
         description="Comprueba la conexión con tu Firestore y describe su contenido.")
     parser.add_argument("--project", help="Project ID de Firebase")
     parser.add_argument("--key", help="API Key de Firebase (Web)")
+    parser.add_argument("--database",
+                        help="ID de la base de Firestore (por defecto '(default)')")
     args = parser.parse_args()
 
     props = leer_propiedades()
     project_id = args.project or props.get("FIREBASE_PROJECT_ID", "")
     api_key = args.key or props.get("FIREBASE_API_KEY", "")
+    database_id = args.database or props.get("FIREBASE_DATABASE_ID", "") or "(default)"
 
     print("=" * 66)
     print(" Verificación de la base de datos de Firebase")
@@ -213,10 +217,11 @@ def main():
 
     print(f"\nProject ID : {project_id}")
     print(f"API Key    : {api_key[:8]}...{api_key[-4:]} ({len(api_key)} caracteres)")
+    print(f"Base datos : {database_id}")
 
     # 1) ¿Responde la base de datos?
     print("\n[1/2] Consultando la base de datos...")
-    codigo, cuerpo = listar_colecciones(project_id, api_key)
+    codigo, cuerpo = listar_colecciones(project_id, api_key, database_id)
 
     if codigo != 200:
         print(f"  HTTP {codigo}")
@@ -242,7 +247,8 @@ def main():
     # 2) Campos reales de cada colección
     print("\n[2/2] Leyendo los campos reales de cada colección...\n")
     for coleccion in colecciones:
-        codigo_doc, cuerpo_doc = listar_documentos(project_id, api_key, coleccion)
+        codigo_doc, cuerpo_doc = listar_documentos(project_id, api_key, coleccion,
+                                                       database_id)
         if codigo_doc != 200:
             print(f"  {coleccion}: HTTP {codigo_doc} (no se pudo leer)")
             continue

@@ -91,16 +91,36 @@ public final class FirebaseConfig {
     }
 
     /**
+     * Nombre de la base de datos de Firestore.
+     * <p>
+     * <b>Por qué no está escrito a fuego.</b> El asistente "Crear una base de datos" de
+     * Firebase tiene un paso (<i>ID y ubicación</i>) donde se puede cambiar el
+     * identificador. Si se elige cualquiera distinto de {@code (default)}, todas las
+     * peticiones del tipo {@code /databases/(default)/...} responderían 404 y la app
+     * parecería "no conectada" sin motivo aparente.
+     * <p>
+     * Por eso el valor es configurable. Si no se define
+     * {@code FIREBASE_DATABASE_ID} en {@code local.properties}, se usa
+     * {@code (default)}, que es lo que Firebase propone por defecto y con diferencia
+     * lo más habitual.
+     */
+    @NonNull
+    public static String databaseId() {
+        String configurado = safe(BuildConfig.FIREBASE_DATABASE_ID);
+        return configurado.isEmpty() ? "(default)" : configurado;
+    }
+
+    /**
      * URL base de Firestore para este proyecto.
      * <p>
      * Firestore exige la barra final en {@code baseUrl()} de Retrofit, y los
      * endpoints de documentos usan la forma
-     * {@code projects/{p}/databases/(default)/documents/{coleccion}}.
+     * {@code projects/{p}/databases/{id}/documents/{coleccion}}.
      */
     @NonNull
     public static String firestoreBaseUrl() {
         return "https://firestore.googleapis.com/v1/projects/" + projectId()
-                + "/databases/(default)/documents/";
+                + "/databases/" + databaseId() + "/documents/";
     }
 
     /** URL base de Firebase Authentication (email/contraseña). */

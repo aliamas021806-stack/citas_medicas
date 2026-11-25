@@ -83,6 +83,9 @@ def escribir_propiedades(valores):
         "FIREBASE_APP_ID": valores["app_id"],
         "FIREBASE_SENDER_ID": valores["sender_id"],
     }
+    # Sólo se escribe si se indicó una base distinta de la estándar.
+    if valores.get("database_id"):
+        nuevas["FIREBASE_DATABASE_ID"] = valores["database_id"]
 
     lineas = []
     if os.path.isfile(NOMBRE_PROPIEDADES):
@@ -123,6 +126,8 @@ def main():
     parser.add_argument("--key", help="API Key (si no hay google-services.json)")
     parser.add_argument("--app-id", default="", help="App ID de Android (opcional)")
     parser.add_argument("--sender-id", default="", help="Project number (opcional)")
+    parser.add_argument("--database", default="",
+                        help="ID de la base de Firestore si NO es '(default)'")
     args = parser.parse_args()
 
     # ── Modo manual: los datos vienen por argumento ─────────────────
@@ -143,6 +148,7 @@ def main():
             "app_id": args.app_id.strip(),
             "package_name": PAQUETE_APP,
             "sender_id": args.sender_id.strip(),
+            "database_id": args.database.strip(),
         }
         print("\nModo manual (sin google-services.json)")
         return rematar(valores)

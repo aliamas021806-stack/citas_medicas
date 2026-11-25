@@ -137,7 +137,8 @@ PACIENTES = [
 
 # ─────────────────────────── llamadas REST ───────────────────────────
 
-def crear_documento(proyecto, clave, coleccion, doc_id, campos):
+def crear_documento(proyecto, clave, coleccion, doc_id, campos,
+                    database_id="(default)"):
     """
     Crea (o reemplaza) un documento con id fijo.
 
@@ -145,7 +146,7 @@ def crear_documento(proyecto, clave, coleccion, doc_id, campos):
     veces no duplica datos. Con POST se generaría un id aleatorio cada vez.
     """
     url = (f"https://firestore.googleapis.com/v1/projects/{proyecto}"
-           f"/databases/(default)/documents/{coleccion}/{doc_id}?key={clave}")
+           f"/databases/{database_id}/documents/{coleccion}/{doc_id}?key={clave}")
     cuerpo = json.dumps({"fields": campos}).encode("utf-8")
     req = urllib.request.Request(
         url, data=cuerpo, method="PATCH",
@@ -193,6 +194,8 @@ def main():
         description="Carga especialidades, doctores y pacientes en Firestore.")
     parser.add_argument("--project", help="Project ID")
     parser.add_argument("--key", help="API Key")
+    parser.add_argument("--database",
+                        help="ID de la base de Firestore (por defecto '(default)')")
     parser.add_argument("--dry-run", action="store_true",
                         help="Muestra lo que haría sin escribir nada")
     args = parser.parse_args()
@@ -200,6 +203,7 @@ def main():
     props = leer_propiedades()
     proyecto = args.project or props.get("FIREBASE_PROJECT_ID", "")
     clave = args.key or props.get("FIREBASE_API_KEY", "")
+    database_id = args.database or props.get("FIREBASE_DATABASE_ID", "") or "(default)"
 
     print("=" * 66)
     print(" Carga de colecciones iniciales en Firestore")
@@ -212,6 +216,7 @@ def main():
 
     print(f"\nProyecto : {proyecto}")
     print(f"API Key  : {clave[:8]}...{clave[-4:]}")
+    print(f"Base     : {database_id}")
 
     trabajo = []
     for esp in ESPECIALIDADES:
@@ -259,7 +264,8 @@ def main():
     ok = 0
     fallos = {}
     for coleccion, doc_id, campos in trabajo:
-        codigo, detalle = crear_documento(proyecto, clave, coleccion, doc_id, campos)
+        codigo, detalle = crear_documento(proyecto, clave, coleccion, doc_id, campos,
+                                          database_id)
         if codigo == 200:
             ok += 1
         else:

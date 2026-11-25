@@ -96,12 +96,17 @@ android {
     def fbProjectId = System.getenv("FIREBASE_PROJECT_ID")  ?: firebaseProps.getProperty("FIREBASE_PROJECT_ID", "")
     def fbAppId     = System.getenv("FIREBASE_APP_ID")      ?: firebaseProps.getProperty("FIREBASE_APP_ID", "")
     def fbSenderId  = System.getenv("FIREBASE_SENDER_ID")   ?: firebaseProps.getProperty("FIREBASE_SENDER_ID", "")
+    // Nombre de la base de Firestore. Casi siempre es "(default)", pero el asistente
+    // de creación permite cambiarlo; si se cambia y no se refleja aquí, todas las
+    // peticiones devolverían 404 sin motivo aparente.
+    def fbDatabaseId = System.getenv("FIREBASE_DATABASE_ID") ?: firebaseProps.getProperty("FIREBASE_DATABASE_ID", "")
 
     defaultConfig {
         buildConfigField "String", "FIREBASE_API_KEY",    "\"${fbApiKey}\""
         buildConfigField "String", "FIREBASE_PROJECT_ID", "\"${fbProjectId}\""
         buildConfigField "String", "FIREBASE_APP_ID",     "\"${fbAppId}\""
         buildConfigField "String", "FIREBASE_SENDER_ID",  "\"${fbSenderId}\""
+        buildConfigField "String", "FIREBASE_DATABASE_ID", "\"${fbDatabaseId}\""
         // Interruptor global: sólo se conecta si hay projectId + apiKey.
         buildConfigField "boolean", "FIREBASE_ENABLED",
                 "${(!fbApiKey.isEmpty() && !fbProjectId.isEmpty())}"
