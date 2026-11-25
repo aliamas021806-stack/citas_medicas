@@ -17,7 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.tuempresa.citasmedicas.R;
-import com.tuempresa.citasmedicas.data.local.AppointmentEntity;
+import com.tuempresa.citasmedicas.model.Appointment;
 import com.tuempresa.citasmedicas.model.AppointmentStatus;
 import com.tuempresa.citasmedicas.util.Resource;
 import com.tuempresa.citasmedicas.viewmodel.AppointmentViewModel;
@@ -82,7 +82,7 @@ public class CitasFragment extends Fragment
         viewModel.getAppointments().observe(getViewLifecycleOwner(), this::render);
     }
 
-    private void render(@Nullable List<AppointmentEntity> appointments) {
+    private void render(@Nullable List<Appointment> appointments) {
         if (appointments == null || appointments.isEmpty()) {
             adapter.submitList(null);
             if (emptyState != null) {
@@ -107,8 +107,8 @@ public class CitasFragment extends Fragment
         adapter.submitList(appointments);
 
         int active = 0;
-        for (AppointmentEntity e : appointments) {
-            if (AppointmentStatus.fromValue(e.status) != AppointmentStatus.CANCELLED) {
+        for (Appointment e : appointments) {
+            if (e.getStatus() != AppointmentStatus.CANCELLED) {
                 active++;
             }
         }
@@ -135,13 +135,13 @@ public class CitasFragment extends Fragment
     }
 
     @Override
-    public void onCancelAppointment(AppointmentEntity appointment) {
+    public void onCancelAppointment(Appointment appointment) {
         new AlertDialog.Builder(requireContext())
                 .setTitle(R.string.cancel_dialog_title)
                 .setMessage(R.string.cancel_dialog_message)
                 .setNegativeButton(R.string.dismiss, null)
                 .setPositiveButton(R.string.confirm, (dialog, which) -> {
-                    viewModel.cancelAppointment(appointment.id);
+                    viewModel.cancelAppointment(appointment.getId());
                     showToast(getString(R.string.appointment_cancelled));
                 })
                 .show();

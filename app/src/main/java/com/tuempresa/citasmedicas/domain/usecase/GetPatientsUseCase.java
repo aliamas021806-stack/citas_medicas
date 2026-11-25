@@ -2,8 +2,8 @@ package com.tuempresa.citasmedicas.domain.usecase;
 
 import androidx.annotation.NonNull;
 
-import com.tuempresa.citasmedicas.data.repository.PatientRepository;
-import com.tuempresa.citasmedicas.data.repository.RepositoryCallback;
+import com.tuempresa.citasmedicas.domain.repository.IPatientRepository;
+import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.domain.UseCase;
 import com.tuempresa.citasmedicas.model.Patient;
 
@@ -14,9 +14,9 @@ import java.util.List;
  */
 public class GetPatientsUseCase extends UseCase<Void, List<Patient>> {
 
-    private final PatientRepository repository;
+    private final IPatientRepository repository;
 
-    public GetPatientsUseCase(@NonNull PatientRepository repository) {
+    public GetPatientsUseCase(@NonNull IPatientRepository repository) {
         this.repository = repository;
     }
 

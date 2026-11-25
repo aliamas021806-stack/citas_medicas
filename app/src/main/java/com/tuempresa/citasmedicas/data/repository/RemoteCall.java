@@ -1,5 +1,7 @@
 package com.tuempresa.citasmedicas.data.repository;
 
+import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
+
 import android.os.Handler;
 import android.os.Looper;
 

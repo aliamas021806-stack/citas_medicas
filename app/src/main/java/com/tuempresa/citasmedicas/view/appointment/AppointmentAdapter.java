@@ -14,7 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import com.tuempresa.citasmedicas.R;
-import com.tuempresa.citasmedicas.data.local.AppointmentEntity;
+import com.tuempresa.citasmedicas.model.Appointment;
 import com.tuempresa.citasmedicas.model.AppointmentStatus;
 
 import java.text.ParseException;
@@ -25,12 +25,16 @@ import java.util.Locale;
 /**
  * Adaptador de "Mis Citas Medicas". Muestra la EDAD del paciente en cada tarjeta
  * y permite cancelar la cita.
+ * <p>
+ * Trabaja con {@link Appointment} (modelo de dominio) y no con {@code AppointmentEntity}
+ * (tabla de Room): la vista no debe saber cómo se guardan las citas. Gracias a eso,
+ * cuando las cites vengan de Firestore este adaptador no cambia.
  */
 public class AppointmentAdapter
-        extends ListAdapter<AppointmentEntity, AppointmentAdapter.AppointmentViewHolder> {
+        extends ListAdapter<Appointment, AppointmentAdapter.AppointmentViewHolder> {
 
     public interface OnAppointmentActionListener {
-        void onCancelAppointment(AppointmentEntity appointment);
+        void onCancelAppointment(Appointment appointment);
     }
 
     private final OnAppointmentActionListener listener;
@@ -45,22 +49,22 @@ public class AppointmentAdapter
         this.listener = listener;
     }
 
-    private static final DiffUtil.ItemCallback<AppointmentEntity> DIFF_CALLBACK =
-            new DiffUtil.ItemCallback<AppointmentEntity>() {
+    private static final DiffUtil.ItemCallback<Appointment> DIFF_CALLBACK =
+            new DiffUtil.ItemCallback<Appointment>() {
                 @Override
-                public boolean areItemsTheSame(@NonNull AppointmentEntity a,
-                                               @NonNull AppointmentEntity b) {
-                    return a.id == b.id;
+                public boolean areItemsTheSame(@NonNull Appointment a,
+                                               @NonNull Appointment b) {
+                    return safeEquals(a.getId(), b.getId());
                 }
 
                 @Override
-                public boolean areContentsTheSame(@NonNull AppointmentEntity a,
-                                                  @NonNull AppointmentEntity b) {
-                    return a.id == b.id
-                            && a.status != null && a.status.equals(b.status)
-                            && a.patientAge == b.patientAge
-                            && safeEquals(a.date, b.date)
-                            && safeEquals(a.time, b.time);
+                public boolean areContentsTheSame(@NonNull Appointment a,
+                                                  @NonNull Appointment b) {
+                    return safeEquals(a.getId(), b.getId())
+                            && java.util.Objects.equals(a.getStatus(), b.getStatus())
+                            && a.getPatientAge() == b.getPatientAge()
+                            && safeEquals(a.getDate(), b.getDate())
+                            && safeEquals(a.getTime(), b.getTime());
                 }
             };
 
@@ -98,25 +102,28 @@ public class AppointmentAdapter
             btnCancel = itemView.findViewById(R.id.btnCancel);
         }
 
-        void bind(AppointmentEntity item, OnAppointmentActionListener listener) {
+        void bind(Appointment item, OnAppointmentActionListener listener) {
             Context ctx = itemView.getContext();
             tvDoctorName.setText(name(ctx, item));
-            tvSpecialty.setText(safe(item.specialtyName));
+            tvSpecialty.setText(safe(item.getSpecialtyName()));
             tvPatientAge.setText(ctx.getString(R.string.fmt_patient_age,
-                    safe(item.patientName),
+                    safe(item.getPatientName()),
                     ctx.getResources().getQuantityString(
-                            R.plurals.years, item.patientAge, item.patientAge)));
-            tvDate.setText(ctx.getString(R.string.fmt_appointment_date, formatDate(item.date)));
-            tvTime.setText(ctx.getString(R.string.fmt_appointment_time, safe(item.time)));
+                            R.plurals.years, item.getPatientAge(), item.getPatientAge())));
+            tvDate.setText(ctx.getString(R.string.fmt_appointment_date,
+                    formatDate(item.getDate())));
+            tvTime.setText(ctx.getString(R.string.fmt_appointment_time, safe(item.getTime())));
 
-            if (item.reason != null && !item.reason.trim().isEmpty()) {
+            String reason = item.getReason();
+            if (reason != null && !reason.trim().isEmpty()) {
                 tvReason.setVisibility(View.VISIBLE);
-                tvReason.setText(ctx.getString(R.string.fmt_reason, item.reason.trim()));
+                tvReason.setText(ctx.getString(R.string.fmt_reason, reason.trim()));
             } else {
                 tvReason.setVisibility(View.GONE);
             }
 
-            AppointmentStatus status = AppointmentStatus.fromValue(item.status);
+            AppointmentStatus status = item.getStatus() != null
+                    ? item.getStatus() : AppointmentStatus.CONFIRMED;
             applyStatus(tvStatus, status);
 
             boolean cancellable = status != AppointmentStatus.CANCELLED;
@@ -146,8 +153,8 @@ public class AppointmentAdapter
             }
         }
 
-        private String name(Context ctx, AppointmentEntity item) {
-            String doctor = safe(item.doctorName);
+        private String name(Context ctx, Appointment item) {
+            String doctor = safe(item.getDoctorName());
             if (doctor.trim().isEmpty()) {
                 return ctx.getString(R.string.doctor_unknown);
             }

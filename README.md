@@ -65,27 +65,56 @@ Paquete    : com.tuempresa.citasmedicas
 Versión    : 3.0 (versionCode 3)
 ```
 
-## 🏗️ Arquitectura (MVVM)
+## 🏗️ Arquitectura (MVVM + Clean Architecture)
 
 ```
-   UI (Activity / Fragment)          ←  Vista
-            │  observa LiveData
+   UI (Activity / Fragment)          ←  Vista  · solo conoce "model"
+            │  observa LiveData<List<Appointment>>
             ▼
       ViewModel (LiveData)           ←  Lógica de presentación
+            │  consume casos de uso
+            ▼
+        UseCase (domain/usecase)     ←  Reglas de negocio · Java puro
+            │  depende de INTERFACES, no de clases
+            ▼
+   domain/repository/IXxxRepository  ←  CONTRATO (inversión de dependencias)
             │
             ▼
-        Repository                   ←  Fuente de datos
-        ┌───┴─────────────────┐
-        ▼                     ▼
-   API Mock (Retrofit)    Room (SQLite)
-   datos falsos offline   citas guardadas
+   data/RepositoryProvider           ←  Raíz de composición (único punto de decisión)
+            │
+   ┌────────┴─────────┐
+   ▼                  ▼
+ API Mock (Retrofit)  Room (SQLite)
+ datos simulados     citas reales
 ```
 
-- **Vista** → `Activity` / `Fragment` + `RecyclerView.Adapter`.
+- **Vista** → `Activity` / `Fragment` + `RecyclerView.Adapter`. **No conoce Room.**
 - **ViewModel** → `LiveData` / `MutableLiveData`, envuelto en `Resource<T>`
-  (`LOADING` / `SUCCESS` / `ERROR`).
-- **Repository** → accede a la API mock y a Room.
+  (`LOADING` / `SUCCESS` / `ERROR`). No construye repositorios: los pide al provider.
+- **Domain** → casos de uso que dependen de las **interfaces** de `domain/repository`.
+  No importa nada de `data.local` ni de Retrofit.
+- **Repository** → implementa la interfaz correspondiente.
 - **Model** → POJOs (`Doctor`, `Patient`, `Appointment`, `Specialty`, `TimeSlot`...).
+
+### 🔌 Puntos de extensión preparados para Firestore
+
+La app está estructurada para que conectar un backend real **no obligue a tocar la UI**.
+Todo lo que hay que cambiar está concentrado en `data/RepositoryProvider`:
+
+| Interfaz (dominio) | Implementación actual | Sustituible por |
+|---|---|---|
+| `IAuthRepository` | `AuthRepository` (simulada) | `FirebaseAuthRepository` |
+| `IDoctorRepository` | `DoctorRepository` (mock Retrofit) | `FirestoreDoctorRepository` |
+| `IPatientRepository` | `PatientRepository` (mock Retrofit) | `FirestorePatientRepository` |
+| `IAppointmentRepository` | `AppointmentRepository` (Room) | **se conserva**: Firestore se añade como sincronizador |
+
+**Para migrar bastará cambiar el `return` de un método del provider.** Los
+`ViewModel`, los casos de uso y las pantallas no se tocan.
+
+> 💡 Las citas son el caso especial: **Room sigue siendo la fuente de verdad de la UI**
+> (de ahí la reactividad y el funcionamiento offline) y Firestore se añade detrás como
+> capa de sincronización. Ese es el patrón recomendado por Google para apps
+> *offline-first*.
 
 ---
 
@@ -171,7 +200,7 @@ limpio con **JDK 21** y **Android SDK 34**:
 | Comprobación | Resultado |
 |---|---|
 | Compilación (`assembleDebug` / `assembleRelease` / `bundleRelease`) | ✅ **BUILD SUCCESSFUL** |
-| Pruebas automatizadas | ✅ **141 tests · 0 fallos · 0 errores** |
+| Pruebas automatizadas | ✅ **158 tests · 0 fallos · 0 errores** |
 | Android Lint | ✅ **0 problemas** (`No issues found`) |
 | Archivos Kotlin (`.kt` / `.kts`) | ✅ **0** — proyecto 100% Java |
 | APK release | 5.4 MB · firmado · instalable |
@@ -181,6 +210,7 @@ limpio con **JDK 21** y **Android SDK 34**:
 
 | Clase | Tests | Qué cubre |
 |---|---|---|
+| `FaseCeroArquitecturaTest` | 17 | **Contratos para Firestore**: las 4 interfaces son públicas y bien formadas, el provider devuelve implementaciones usables, el mapeo modelo↔entidad no pierde campos, y **tests que congelan la arquitectura** (fallan si alguien vuelve a importar Room desde la UI o a instanciar repositorios en un ViewModel) |
 | `PantallasArrancanTest` | 15 | **Abre las pantallas de verdad** con el ciclo de vida completo: login, cambio a registro, login inválido, login válido → navegación, main con y sin sesión, las 3 pestañas, detalle del doctor, confirmar sin horario, y **rotación** de pantalla |
 | `FullFlowTest` | 13 | **Flujo completo**: sesión persistente, catálogo, horario disponible, agendar en Room, aparece en "Mis Citas", sobrevive a reabrir la app, cancelar cita y contadores |
 | `ResponsiveLayoutTest` | 14 | Requisito de **tablet**: resuelve 1 columna en teléfono y 2 en tablet, espaciados escalados, e infla las 6 pantallas en ambos tamaños verificando que no falte ningún ID |
@@ -246,19 +276,37 @@ es sustituir los datos sintéticos por persistencia real en la nube:
 | Sincronización | — | Firestore offline persistence |
 
 **Por qué la arquitectura actual ya está preparada:** la app nunca habla con
-Retrofit directamente. La cadena es
+Retrofit ni con Room directamente. La cadena es
 
 ```
-View → ViewModel → Caso de uso → Repository → (DTO / Entidad)
+View → ViewModel → Caso de uso → INTERFAZ de repositorio → Implementación
 ```
 
-Así que para conectar Firebase basta con añadir un `FirebaseDoctorRepository` que
-implemente la misma interfaz que el actual, y cambiar la raíz de composición. Ni
-las pantallas ni los ViewModels necesitan cambios.
+El dominio declara contratos en `domain/repository/` y la infraestructura los
+implementa. La implementación concreta se elige en un único sitio:
+`data/RepositoryProvider`.
 
-También hay que tener en cuenta que Firebase exige dependencias **Kotlin**, lo cual
-entra en conflicto con la restricción actual de "Java puro": habrá que decidir si
-se relaja esa restricción o se usa la **API REST de Firestore** desde Java.
+### ✅ Fase 0 — Preparación (COMPLETADA)
+
+Sin tocar Firebase todavía, se dejó la estructura lista y verificada:
+
+- [x] **4 interfaces de dominio** creadas: `IAuthRepository`, `IDoctorRepository`,
+      `IPatientRepository`, `IAppointmentRepository`.
+- [x] Las implementaciones actuales (`AuthRepository`, `DoctorRepository`,
+      `PatientRepository`, `AppointmentRepository`) las implementan.
+- [x] **`RepositoryProvider`** como raíz de composición: los ViewModels ya **no**
+      hacen `new XRepository()`.
+- [x] **`AppointmentEntity` (Room) sacada de la UI y del dominio**: la presentación
+      usa `model/Appointment` y `LiveData<List<Appointment>>`. La conversión la hace
+      `AppointmentMapper`, única clase que conoce ambas representaciones.
+- [x] Identificadores como **`String`** (el tipo que usa Firestore).
+- [x] **17 tests nuevos** (`FaseCeroArquitecturaTest`) que, además de validar los
+      contratos, **congelan la arquitectura**: fallan si alguien vuelve a importar
+      `data.local` desde la UI o el dominio, o a instanciar repositorios concretos
+      en un ViewModel.
+
+**Resultado:** 158 tests, 0 fallos; 0 incidencias de Lint; 0 archivos Kotlin.
+La app funciona exactamente igual que antes.
 
 #### Pasos concretos para cuando se conecte Firebase
 
@@ -268,15 +316,20 @@ se relaja esa restricción o se usa la **API REST de Firestore** desde Java.
       igual que el `applicationId`, el `package` del manifest y la ruta de `MainActivity`).
 - [ ] Descargar `google-services.json` y colocarlo en `app/google-services.json`.
 - [ ] Crear la base de datos en **Firestore Database** (sin esto, toda escritura falla).
-- [ ] Añadir el plugin `com.google.gms.google-services` (y el repositorio `google()`)
-      en `build.gradle` de proyecto y de app.
 - [ ] Colecciones previstas: `doctors`, `specialties`, `patients`, `appointments`.
-- [ ] Crear `FirebaseDoctorRepository` / `FirebaseAppointmentRepository` que implementen
-      **las mismas interfaces** que los repositorios actuales.
-- [ ] Cambiar solo la raíz de composición (quién construye el repositorio).
-- [ ] Mantener **Room como caché offline** y las reglas de seguridad de Firestore.
-- [ ] No usar `orderBy()` junto con `where()` sin índices compuestos: filtrar/ordenar
-      en memoria como ya hace hoy la capa de repositorio.
+- [ ] **Fase 1 — Auth:** crear `FirebaseAuthRepository implements IAuthRepository` y
+      devolverlo en `RepositoryProvider.auth(...)`. Es el cambio más limpio de todos.
+- [ ] **Fase 2 — Catálogo:** crear `FirestoreDoctorRepository implements IDoctorRepository`
+      y `FirestorePatientRepository implements IPatientRepository`; devolverlos en el
+      provider. Room puede actuar como caché de lectura.
+- [ ] **Fase 3 — Citas:** **no sustituir** `AppointmentRepository`. Añadir un
+      sincronizador (`AppointmentSyncWorker`) que lea del DAO
+      (`getDaoForSync()`) y empuje a Firestore. Room sigue siendo la fuente de verdad
+      de la UI.
+- [ ] Añadir un flag (`useFirebase`) por defecto `false`, para poder volver atrás sin
+      tocar código.
+- [ ] Reglas de seguridad de Firestore y **no usar `orderBy()` con `where()`** sin
+      índices compuestos: filtrar y ordenar en memoria, como ya hace el repositorio.
 
 > 💡 **Atajo si se quiere mantener "Java puro":** Firestore y Auth tienen **API REST**
 > (`https://firestore.googleapis.com/v1/...` y `identitytoolkit`). Se pueden consumir

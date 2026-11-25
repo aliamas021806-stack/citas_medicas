@@ -3,6 +3,7 @@ package com.tuempresa.citasmedicas.data.repository;
 import android.os.Handler;
 import android.os.Looper;
 
+import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.model.AuthRequest;
 import com.tuempresa.citasmedicas.model.User;
 import com.tuempresa.citasmedicas.util.AuthValidator;
@@ -16,7 +17,7 @@ import java.util.Locale;
  * un pequeño delay asíncrono (Handler) para reproducir la latencia de una API.
  * Conserva la EDAD del paciente en la sesión.
  */
-public class AuthRepository {
+public class AuthRepository implements com.tuempresa.citasmedicas.domain.repository.IAuthRepository {
 
     private static final long FAKE_DELAY_MS = 900L;
     /** Edad por defecto "generada" para el login cuando no viene en la request. */

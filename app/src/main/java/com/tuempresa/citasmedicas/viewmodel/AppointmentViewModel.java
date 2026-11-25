@@ -7,8 +7,8 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
-import com.tuempresa.citasmedicas.data.local.AppointmentEntity;
-import com.tuempresa.citasmedicas.data.repository.AppointmentRepository;
+import com.tuempresa.citasmedicas.data.RepositoryProvider;
+import com.tuempresa.citasmedicas.domain.repository.IAppointmentRepository;
 import com.tuempresa.citasmedicas.domain.UseCase;
 import com.tuempresa.citasmedicas.domain.usecase.CancelAppointmentUseCase;
 import com.tuempresa.citasmedicas.domain.usecase.CreateAppointmentUseCase;
@@ -36,7 +36,7 @@ public class AppointmentViewModel extends AndroidViewModel {
     private final CreateAppointmentUseCase createAppointmentUseCase;
     private final CancelAppointmentUseCase cancelAppointmentUseCase;
 
-    private final LiveData<List<AppointmentEntity>> appointments;
+    private final LiveData<List<Appointment>> appointments;
     private final MutableLiveData<Resource<Void>> actionState = new MutableLiveData<>();
     /**
      * Evento de un solo disparo que indica que la cita se creó correctamente.
@@ -47,14 +47,16 @@ public class AppointmentViewModel extends AndroidViewModel {
 
     public AppointmentViewModel(@NonNull Application application) {
         super(application);
-        AppointmentRepository repository = new AppointmentRepository(application);
+        // La implementación concreta la decide RepositoryProvider (raíz de composición).
+        IAppointmentRepository repository =
+                RepositoryProvider.appointments(application.getApplicationContext());
         this.getAppointmentsUseCase = new GetAppointmentsUseCase(repository);
         this.createAppointmentUseCase = new CreateAppointmentUseCase(repository);
         this.cancelAppointmentUseCase = new CancelAppointmentUseCase(repository);
         this.appointments = getAppointmentsUseCase.execute();
     }
 
-    public LiveData<List<AppointmentEntity>> getAppointments() {
+    public LiveData<List<Appointment>> getAppointments() {
         return appointments;
     }
 
@@ -68,9 +70,9 @@ public class AppointmentViewModel extends AndroidViewModel {
 
     public void createAppointment(Appointment appointment) {
         actionState.setValue(Resource.loading());
-        createAppointmentUseCase.execute(appointment, new UseCase.Callback<Long>() {
+        createAppointmentUseCase.execute(appointment, new UseCase.Callback<String>() {
             @Override
-            public void onSuccess(Long data) {
+            public void onSuccess(String data) {
                 actionState.setValue(Resource.success(null));
                 // true = éxito de creación (evento observable por la Activity)
                 navigateBack.setValue(Boolean.TRUE);
@@ -83,7 +85,7 @@ public class AppointmentViewModel extends AndroidViewModel {
         });
     }
 
-    public void cancelAppointment(long appointmentId) {
+    public void cancelAppointment(String appointmentId) {
         actionState.setValue(Resource.loading());
         cancelAppointmentUseCase.execute(appointmentId, new UseCase.Callback<Void>() {
             @Override

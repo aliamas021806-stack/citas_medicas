@@ -4,7 +4,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.tuempresa.citasmedicas.data.repository.DoctorRepository;
+import com.tuempresa.citasmedicas.data.RepositoryProvider;
 import com.tuempresa.citasmedicas.domain.UseCase;
 import com.tuempresa.citasmedicas.domain.usecase.GetAvailableSlotsUseCase;
 import com.tuempresa.citasmedicas.domain.usecase.GetDoctorsUseCase;
@@ -27,7 +27,9 @@ import java.util.Locale;
  */
 public class DoctorViewModel extends ViewModel {
 
-    private final DoctorRepository repository = new DoctorRepository();
+    /** Implementación resuelta por la raíz de composición (hoy mock, mañana Firestore). */
+    private final com.tuempresa.citasmedicas.domain.repository.IDoctorRepository repository =
+            RepositoryProvider.doctors();
 
     private final GetSpecialtiesUseCase getSpecialtiesUseCase;
     private final GetDoctorsUseCase getDoctorsUseCase;

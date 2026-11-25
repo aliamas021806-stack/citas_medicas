@@ -13,7 +13,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.button.MaterialButton;
 import com.tuempresa.citasmedicas.R;
-import com.tuempresa.citasmedicas.data.local.AppointmentEntity;
+import com.tuempresa.citasmedicas.model.Appointment;
 import com.tuempresa.citasmedicas.model.AppointmentStatus;
 import com.tuempresa.citasmedicas.model.Patient;
 import com.tuempresa.citasmedicas.model.User;
@@ -127,12 +127,12 @@ public class ProfileFragment extends Fragment {
         return s;
     }
 
-    private void updateStats(List<AppointmentEntity> list) {
+    private void updateStats(List<Appointment> list) {
         int total = list != null ? list.size() : 0;
         int upcoming = 0;
         if (list != null) {
-            for (AppointmentEntity e : list) {
-                if (AppointmentStatus.fromValue(e.status) == AppointmentStatus.CONFIRMED) {
+            for (Appointment e : list) {
+                if (e.getStatus() == AppointmentStatus.CONFIRMED) {
                     upcoming++;
                 }
             }

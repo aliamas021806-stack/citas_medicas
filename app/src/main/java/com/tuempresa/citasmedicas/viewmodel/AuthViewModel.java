@@ -1,10 +1,15 @@
 package com.tuempresa.citasmedicas.viewmodel;
 
+import android.app.Application;
+
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.tuempresa.citasmedicas.data.repository.AuthRepository;
+import com.tuempresa.citasmedicas.data.RepositoryProvider;
+import com.tuempresa.citasmedicas.domain.repository.IAuthRepository;
 import com.tuempresa.citasmedicas.domain.UseCase;
 import com.tuempresa.citasmedicas.domain.usecase.LoginUseCase;
 import com.tuempresa.citasmedicas.domain.usecase.RegisterUseCase;
@@ -20,14 +25,17 @@ import com.tuempresa.citasmedicas.util.Resource;
  * el resultado a {@link Resource} para que la vista pinte estado de carga, éxito
  * o error.
  */
-public class AuthViewModel extends ViewModel {
+public class AuthViewModel extends AndroidViewModel {
 
     private final LoginUseCase loginUseCase;
     private final RegisterUseCase registerUseCase;
     private final MutableLiveData<Resource<User>> authState = new MutableLiveData<>();
 
-    public AuthViewModel() {
-        AuthRepository repository = new AuthRepository();
+    public AuthViewModel(@NonNull Application application) {
+        super(application);
+        // La implementación concreta la decide RepositoryProvider (raíz de composición).
+        IAuthRepository repository = RepositoryProvider.auth(application);
+
         this.loginUseCase = new LoginUseCase(repository);
         this.registerUseCase = new RegisterUseCase(repository);
     }

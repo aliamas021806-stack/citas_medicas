@@ -6,6 +6,7 @@ import com.tuempresa.citasmedicas.data.remote.dto.DoctorDto;
 import com.tuempresa.citasmedicas.data.remote.dto.DtoMapper;
 import com.tuempresa.citasmedicas.data.remote.dto.SpecialtyDto;
 import com.tuempresa.citasmedicas.data.remote.dto.TimeSlotDto;
+import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.model.Doctor;
 import com.tuempresa.citasmedicas.model.Specialty;
 import com.tuempresa.citasmedicas.model.TimeSlot;
@@ -19,7 +20,7 @@ import java.util.List;
  * y traduce los DTO de red a modelos de dominio con {@link DtoMapper}. La app nunca
  * ve las clases {@code *Dto}.
  */
-public class DoctorRepository {
+public class DoctorRepository implements com.tuempresa.citasmedicas.domain.repository.IDoctorRepository {
 
     private final MedicalApiService api;
 

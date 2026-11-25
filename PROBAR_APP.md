@@ -160,13 +160,22 @@ SHA-256: 3df1af33ce2aae8a300723a6509db9f061df334bad97d8a2e6ae485eff7ec5b4
 
 ## 🛠️ Para revisar el código
 
+> **Nota de arquitectura:** el dominio declara **interfaces** (`domain/repository/`)
+> y la infraestructura las implementa. La implementación concreta se elige en un solo
+> archivo, `data/RepositoryProvider.java`. Gracias a eso, la capa de presentación
+> **no conoce Room** (usa `model/Appointment`) y conectar un backend real como
+> Firestore no obligará a tocar pantallas ni ViewModels. Hay 17 tests
+> (`FaseCeroArquitecturaTest`) que verifican y **congelan** esa separación.
+
 | Quiero ver… | Dónde está |
 |---|---|
 | Arquitectura MVVM | `app/src/main/java/com/tuempresa/citasmedicas/` |
 | Vistas (Activities / Fragments) | `view/` |
 | Lógica de presentación (ViewModels) | `viewmodel/` |
 | Casos de uso (Clean Architecture) | `domain/usecase/` |
-| Repositorios | `data/repository/` |
+| **Contratos de repositorio (interfaces)** | `domain/repository/` |
+| **Raíz de composición (qué implementación se usa)** | `data/RepositoryProvider.java` |
+| Implementaciones de repositorio | `data/repository/` |
 | API simulada (Retrofit + Mock) | `data/remote/` |
 | Base de datos local (Room) | `data/local/` |
 | Navegación tipada | `navigation/` |
@@ -180,7 +189,7 @@ SHA-256: 3df1af33ce2aae8a300723a6509db9f061df334bad97d8a2e6ae485eff7ec5b4
 ./gradlew testDebugUnitTest
 ```
 
-**141 pruebas automatizadas · 0 fallos.** Incluyen pruebas que abren todas las
+**158 pruebas automatizadas · 0 fallos.** Incluyen pruebas que abren todas las
 pantallas y recorren el flujo completo (login → agendar → ver cita → cancelar).
 
 ### Compilar el APK desde cero

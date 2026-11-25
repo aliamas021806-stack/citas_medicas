@@ -3,6 +3,7 @@ package com.tuempresa.citasmedicas.data.repository;
 import com.tuempresa.citasmedicas.data.remote.ApiClient;
 import com.tuempresa.citasmedicas.data.remote.MedicalApiService;
 import com.tuempresa.citasmedicas.data.remote.dto.DtoMapper;
+import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.model.Patient;
 
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.List;
  * Obtiene la información del paciente (incluida su EDAD) desde la API mock, cuyos
  * datos son generados por IA en {@code MockData}, y la traduce de DTO a modelo.
  */
-public class PatientRepository {
+public class PatientRepository implements com.tuempresa.citasmedicas.domain.repository.IPatientRepository {
 
     private final MedicalApiService api;
 

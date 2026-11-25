@@ -3,8 +3,8 @@ package com.tuempresa.citasmedicas.domain.usecase;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.tuempresa.citasmedicas.data.repository.DoctorRepository;
-import com.tuempresa.citasmedicas.data.repository.RepositoryCallback;
+import com.tuempresa.citasmedicas.domain.repository.IDoctorRepository;
+import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.domain.UseCase;
 import com.tuempresa.citasmedicas.model.Doctor;
 
@@ -35,9 +35,9 @@ public class GetDoctorsUseCase extends UseCase<GetDoctorsUseCase.Params, List<Do
         }
     }
 
-    private final DoctorRepository repository;
+    private final IDoctorRepository repository;
 
-    public GetDoctorsUseCase(DoctorRepository repository) {
+    public GetDoctorsUseCase(IDoctorRepository repository) {
         this.repository = repository;
     }
 

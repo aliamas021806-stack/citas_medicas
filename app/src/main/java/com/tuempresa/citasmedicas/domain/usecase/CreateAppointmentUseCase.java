@@ -3,8 +3,8 @@ package com.tuempresa.citasmedicas.domain.usecase;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.tuempresa.citasmedicas.data.repository.AppointmentRepository;
-import com.tuempresa.citasmedicas.data.repository.RepositoryCallback;
+import com.tuempresa.citasmedicas.domain.repository.IAppointmentRepository;
+import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.domain.UseCase;
 import com.tuempresa.citasmedicas.model.Appointment;
 
@@ -21,25 +21,25 @@ import com.tuempresa.citasmedicas.model.Appointment;
  * </ul>
  * Se validan en dominio para que la regla no dependa de qué pantalla llame.
  */
-public class CreateAppointmentUseCase extends UseCase<Appointment, Long> {
+public class CreateAppointmentUseCase extends UseCase<Appointment, String> {
 
-    private final AppointmentRepository repository;
+    private final IAppointmentRepository repository;
 
-    public CreateAppointmentUseCase(@NonNull AppointmentRepository repository) {
+    public CreateAppointmentUseCase(@NonNull IAppointmentRepository repository) {
         this.repository = repository;
     }
 
     @Override
     public void execute(@Nullable Appointment appointment,
-                        @NonNull Callback<Long> callback) {
+                        @NonNull Callback<String> callback) {
         String error = validate(appointment);
         if (error != null) {
             callback.onError(error);
             return;
         }
-        repository.create(appointment, new RepositoryCallback<Long>() {
+        repository.create(appointment, new RepositoryCallback<String>() {
             @Override
-            public void onSuccess(Long data) {
+            public void onSuccess(String data) {
                 callback.onSuccess(data);
             }
 

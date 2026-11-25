@@ -4,9 +4,10 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.tuempresa.citasmedicas.data.repository.PatientRepository;
+import com.tuempresa.citasmedicas.data.RepositoryProvider;
 import com.tuempresa.citasmedicas.domain.UseCase;
 import com.tuempresa.citasmedicas.domain.usecase.GetPatientUseCase;
+import com.tuempresa.citasmedicas.domain.usecase.GetPatientsUseCase;
 import com.tuempresa.citasmedicas.model.Patient;
 import com.tuempresa.citasmedicas.util.Resource;
 
@@ -18,7 +19,10 @@ import java.util.List;
  */
 public class PatientViewModel extends ViewModel {
 
-    private final GetPatientUseCase getPatientUseCase = new GetPatientUseCase(new PatientRepository());
+    private final GetPatientUseCase getPatientUseCase =
+            new GetPatientUseCase(RepositoryProvider.patients());
+    private final GetPatientsUseCase getPatientsUseCase =
+            new GetPatientsUseCase(RepositoryProvider.patients());
 
     private final MutableLiveData<Resource<Patient>> patient = new MutableLiveData<>();
     private final MutableLiveData<Resource<List<Patient>>> patients = new MutableLiveData<>();
@@ -48,8 +52,7 @@ public class PatientViewModel extends ViewModel {
 
     public void loadPatients() {
         patients.setValue(Resource.loading());
-        new com.tuempresa.citasmedicas.domain.usecase.GetPatientsUseCase(new PatientRepository())
-                .execute(new UseCase.Callback<List<Patient>>() {
+        getPatientsUseCase.execute(new UseCase.Callback<List<Patient>>() {
                     @Override
                     public void onSuccess(List<Patient> result) {
                         patients.setValue(Resource.success(result));

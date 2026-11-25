@@ -2,8 +2,8 @@ package com.tuempresa.citasmedicas.domain.usecase;
 
 import androidx.annotation.NonNull;
 
-import com.tuempresa.citasmedicas.data.repository.AuthRepository;
-import com.tuempresa.citasmedicas.data.repository.RepositoryCallback;
+import com.tuempresa.citasmedicas.domain.repository.IAuthRepository;
+import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.domain.UseCase;
 import com.tuempresa.citasmedicas.model.AuthRequest;
 import com.tuempresa.citasmedicas.model.User;
@@ -18,9 +18,9 @@ import com.tuempresa.citasmedicas.model.User;
  */
 public class LoginUseCase extends UseCase<AuthRequest, User> {
 
-    private final AuthRepository repository;
+    private final IAuthRepository repository;
 
-    public LoginUseCase(AuthRepository repository) {
+    public LoginUseCase(IAuthRepository repository) {
         this.repository = repository;
     }
 
