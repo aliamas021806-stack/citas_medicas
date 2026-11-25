@@ -3,6 +3,9 @@
 Esta guía explica cómo **instalar y probar** el Sistema de Citas Médicas sin
 necesidad de Android Studio, sin emulador y sin conocimientos técnicos.
 
+> 📌 Esta misma información está publicada como **issue fijado** del repositorio:
+> **[Issue #1 — CÓMO PROBAR LA APP](https://github.com/aliamas021806-stack/citas_medicas/issues/1)**
+
 ---
 
 ## ⬇️ Paso 1 — Descargar el APK
@@ -11,13 +14,14 @@ necesidad de Android Studio, sin emulador y sin conocimientos técnicos.
 
 ### 👉 [Descargar CitasMedicas-v3.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v3.0/CitasMedicas-v3.0.apk)
 
-- Tamaño: **5.4 MB**
+- Tamaño: **5.4 MB** (5 631 143 bytes)
 - Versión: **3.0**
 - Requisito: **Android 7.0 o superior** (API 24+)
 - Firmado con certificado de release ✅
 
 > Si prefieres ver todas las versiones, entra en
-> [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases).
+> [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) o en la
+> [página de la release v3.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0).
 
 ---
 
@@ -123,11 +127,13 @@ Todo lo que sigue funciona **sin conexión a internet**.
 
 Si quieres comprobar que el archivo descargado es exactamente el que generó la CI:
 
-**SHA-256** (versión 3.0):
+**SHA-256** (versión 3.0, APK publicado en la release `v3.0`):
 
 ```
-17d7e03813499c24b449927c89f1e916d00b6c9e4c4ebeb03716dc93b086578f
+dc2de6f64d2031e0a73a4edc0b4a53eab71707dc9650c440185e41dc807340b7
 ```
+
+Tamaño exacto: **5 631 143 bytes** (5.4 MB).
 
 Comprobar en Linux/macOS:
 

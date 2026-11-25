@@ -1,7 +1,8 @@
 
 # 🩺 Sistema de Citas Médicas
 
-> ### 👨‍🏫 ¿Eres el profesor? **[➡️ Guía rápida para probar la app (PROBAR_APP.md)](PROBAR_APP.md)**
+> ### 👨‍🏫 ¿Eres el profesor? Empieza por el issue fijado:
+> ## 📌 [👉 CÓMO PROBAR LA APP — descarga del APK e instrucciones (Issue #1)](https://github.com/aliamas021806-stack/citas_medicas/issues/1)
 >
 > **Descarga directa del APK, sin cuenta de GitHub y sin Android Studio:**
 >
@@ -10,6 +11,7 @@
 > - **Android 7.0+** · 5.4 MB · firmado y listo para instalar
 > - Login: cualquier correo válido + contraseña de 4 caracteres (ej. `profesor@universidad.edu` / `1234`)
 > - **Funciona 100 % sin internet** · no requiere crear cuenta
+> - 📄 Guía extendida: **[PROBAR_APP.md](PROBAR_APP.md)** · 🏷️ [Página de la release v3.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0)
 
 ---
 
@@ -41,10 +43,27 @@ local con **Room (SQLite)**.
 |---|---|---|
 | **APK (v3.0)** | [⬇️ CitasMedicas-v3.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v3.0/CitasMedicas-v3.0.apk) | Instalar y probar en un teléfono Android |
 | **AAB (v3.0)** | [⬇️ CitasMedicas-v3.0.aab](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v3.0/CitasMedicas-v3.0.aab) | Publicar en Google Play |
+| Release v3.0 | [Página de la release](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0) | Notas de la versión y verificación del APK |
 | Todas las versiones | [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) | Historial de versiones |
 
 > 📖 Instrucciones detalladas de instalación y recorrido de prueba:
-> **[PROBAR_APP.md](PROBAR_APP.md)**
+> **[PROBAR_APP.md](PROBAR_APP.md)** · **[Issue #1 (fijado)](https://github.com/aliamas021806-stack/citas_medicas/issues/1)**
+>
+> ℹ️ **¿Por qué Release y no el artifact de Actions?** Los *artifacts* de la pestaña
+> **Actions** exigen tener cuenta en GitHub y vienen comprimidos en `.zip`. La **Release**
+> es descarga pública, directa y sin login.
+
+### 🔐 Verificación del APK publicado
+
+```
+Archivo    : CitasMedicas-v3.0.apk
+Bytes      : 5631143  (5.4 MB)
+SHA-256    : dc2de6f64d2031e0a73a4edc0b4a53eab71707dc9650c440185e41dc807340b7
+Firma      : v1 + v2 + v3 (keystore de release)
+Cert SHA256: 3df1af33ce2aae8a300723a6509db9f061df334bad97d8a2e6ae485eff7ec5b4
+Paquete    : com.tuempresa.citasmedicas
+Versión    : 3.0 (versionCode 3)
+```
 
 ## 🏗️ Arquitectura (MVVM)
 
@@ -240,6 +259,29 @@ las pantallas ni los ViewModels necesitan cambios.
 También hay que tener en cuenta que Firebase exige dependencias **Kotlin**, lo cual
 entra en conflicto con la restricción actual de "Java puro": habrá que decidir si
 se relaja esa restricción o se usa la **API REST de Firestore** desde Java.
+
+#### Pasos concretos para cuando se conecte Firebase
+
+- [ ] Crear el proyecto en la [consola de Firebase](https://console.firebase.google.com/)
+      y registrar la app Android con el paquete **`com.tuempresa.citasmedicas`**
+      (el `package_name` del `google-services.json` **debe** coincidir exactamente,
+      igual que el `applicationId`, el `package` del manifest y la ruta de `MainActivity`).
+- [ ] Descargar `google-services.json` y colocarlo en `app/google-services.json`.
+- [ ] Crear la base de datos en **Firestore Database** (sin esto, toda escritura falla).
+- [ ] Añadir el plugin `com.google.gms.google-services` (y el repositorio `google()`)
+      en `build.gradle` de proyecto y de app.
+- [ ] Colecciones previstas: `doctors`, `specialties`, `patients`, `appointments`.
+- [ ] Crear `FirebaseDoctorRepository` / `FirebaseAppointmentRepository` que implementen
+      **las mismas interfaces** que los repositorios actuales.
+- [ ] Cambiar solo la raíz de composición (quién construye el repositorio).
+- [ ] Mantener **Room como caché offline** y las reglas de seguridad de Firestore.
+- [ ] No usar `orderBy()` junto con `where()` sin índices compuestos: filtrar/ordenar
+      en memoria como ya hace hoy la capa de repositorio.
+
+> 💡 **Atajo si se quiere mantener "Java puro":** Firestore y Auth tienen **API REST**
+> (`https://firestore.googleapis.com/v1/...` y `identitytoolkit`). Se pueden consumir
+> con el mismo **Retrofit/OkHttp** que ya está integrado, sin añadir ninguna
+> dependencia Kotlin. Es la vía recomendada si la restricción de Java puro sigue vigente.
 
 ---
 
