@@ -34,61 +34,92 @@ public abstract class AppDatabase extends RoomDatabase {
                             .fallbackToDestructiveMigration()
                             .addCallback(SEED_CALLBACK)
                             .build();
+                    // El seed se pide AQUÍ, cuando INSTANCE ya está asignado.
+                    // Antes se lanzaba desde onCreate(), que puede dispararse antes de
+                    // que la asignación termine: entonces INSTANCE era null dentro del
+                    // executor y el seed moría con NullPointerException, dejando la
+                    // base vacía y "Mis Citas" en blanco.
+                    seedIfEmpty();
                 }
             }
         }
         return INSTANCE;
     }
 
-    /** Inserta citas de ejemplo la primera vez que se crea la base de datos. */
+    /**
+     * Inserta las citas de ejemplo sólo si la base está vacía.
+     * <p>
+     * Es idempotente: si el usuario ya tiene citas (o las borró a propósito) no
+     * vuelve a sembrar.
+     */
+    private static void seedIfEmpty() {
+        final AppDatabase db = INSTANCE;
+        if (db == null) {
+            return;
+        }
+        databaseWriteExecutor.execute(() -> {
+            try {
+                AppointmentDao dao = db.appointmentDao();
+                if (!dao.getAllOnce().isEmpty()) {
+                    return;
+                }
+                java.util.List<String> dates =
+                        com.tuempresa.citasmedicas.data.mock.MockData.getSelectableDates();
+                if (dates.size() < 4) {
+                    // Sin fechas suficientes no se puede sembrar sin salir de rango.
+                    return;
+                }
+                for (AppointmentEntity cita : demoAppointments(dates)) {
+                    dao.insert(cita);
+                }
+            } catch (RuntimeException e) {
+                // Un fallo al sembrar nunca debe tumbar el arranque de la app.
+                if (android.util.Log.isLoggable("AppDatabase", android.util.Log.WARN)) {
+                    android.util.Log.w("AppDatabase", "No se pudo sembrar la base", e);
+                }
+            }
+        });
+    }
+
+    /** Citas de ejemplo usadas la primera vez que se crea la base. */
+    private static java.util.List<AppointmentEntity> demoAppointments(
+            java.util.List<String> dates) {
+        java.util.List<AppointmentEntity> lista = new java.util.ArrayList<>(3);
+        lista.add(demoCita("doc_01", "Dr. Carlos Ramírez", "Cardiología",
+                dates.get(1), "10:00", "Confirmed", "Chequeo cardiológico anual"));
+        lista.add(demoCita("doc_02", "Dra. María González", "Pediatría",
+                dates.get(3), "16:00", "Confirmed", "Control de crecimiento"));
+        lista.add(demoCita("doc_03", "Dra. Andrea López", "Dermatología",
+                dates.get(0), "09:00", "Cancelled", "Revisión de lunar"));
+        return lista;
+    }
+
+    private static AppointmentEntity demoCita(String doctorId, String doctorName,
+                                              String specialtyName, String date,
+                                              String time, String status, String reason) {
+        AppointmentEntity a = new AppointmentEntity();
+        a.doctorId = doctorId;
+        a.doctorName = doctorName;
+        a.specialtyName = specialtyName;
+        a.patientName = "Laura Jiménez";
+        a.patientAge = 34;
+        a.date = date;
+        a.time = time;
+        a.status = status;
+        a.reason = reason;
+        a.createdAt = System.currentTimeMillis();
+        return a;
+    }
+
+    /**
+     * Callback vacío a propósito: mantiene el enganche de Room por si en el futuro
+     * hace falta reaccionar a onCreate/onOpen, pero YA NO siembra datos (lo hace
+     * {@link #seedIfEmpty()} cuando la instancia está disponible).
+     */
     private static final RoomDatabase.Callback SEED_CALLBACK = new RoomDatabase.Callback() {
         @Override
         public void onCreate(SupportSQLiteDatabase db) {
             super.onCreate(db);
-            databaseWriteExecutor.execute(() -> {
-                AppointmentDao dao = INSTANCE.appointmentDao();
-                java.util.List<String> dates =
-                        com.tuempresa.citasmedicas.data.mock.MockData.getSelectableDates();
-
-                AppointmentEntity a1 = new AppointmentEntity();
-                a1.doctorId = "doc_01";
-                a1.doctorName = "Dr. Carlos Ramírez";
-                a1.specialtyName = "Cardiología";
-                a1.patientName = "Laura Jiménez";
-                a1.patientAge = 34;
-                a1.date = dates.get(1);
-                a1.time = "10:00";
-                a1.status = "Confirmed";
-                a1.reason = "Chequeo cardiológico anual";
-                a1.createdAt = System.currentTimeMillis();
-                dao.insert(a1);
-
-                AppointmentEntity a2 = new AppointmentEntity();
-                a2.doctorId = "doc_02";
-                a2.doctorName = "Dra. María González";
-                a2.specialtyName = "Pediatría";
-                a2.patientName = "Laura Jiménez";
-                a2.patientAge = 34;
-                a2.date = dates.get(3);
-                a2.time = "16:00";
-                a2.status = "Confirmed";
-                a2.reason = "Control de crecimiento";
-                a2.createdAt = System.currentTimeMillis();
-                dao.insert(a2);
-
-                AppointmentEntity a3 = new AppointmentEntity();
-                a3.doctorId = "doc_03";
-                a3.doctorName = "Dra. Andrea López";
-                a3.specialtyName = "Dermatología";
-                a3.patientName = "Laura Jiménez";
-                a3.patientAge = 34;
-                a3.date = dates.get(0);
-                a3.time = "09:00";
-                a3.status = "Cancelled";
-                a3.reason = "Revisión de lunar";
-                a3.createdAt = System.currentTimeMillis();
-                dao.insert(a3);
-            });
         }
     };
 }

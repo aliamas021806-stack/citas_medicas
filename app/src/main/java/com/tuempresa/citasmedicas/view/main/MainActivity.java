@@ -19,7 +19,14 @@ import com.tuempresa.citasmedicas.util.SessionManager;
  */
 public class MainActivity extends AppCompatActivity {
 
+    /** Clave con la que se recuerda la pestaña activa al rotar o recrear. */
+    private static final String STATE_SELECTED_TAB = "state_selected_tab";
+
     private MaterialToolbar toolbar;
+    /** Pestaña activa. Fuente de verdad frente al estado interno del BottomNav. */
+    private int selectedTab = Routes.Tab.DOCTORS;
+    /** Evita volver a montar el fragmento cuando sólo se está restaurando. */
+    private boolean restoringState = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,22 +46,42 @@ public class MainActivity extends AppCompatActivity {
         bottomNav.setOnItemSelectedListener(this::onNavItemSelected);
 
         if (savedInstanceState == null) {
-            bottomNav.setSelectedItemId(R.id.nav_doctors);
+            selectedTab = Routes.Tab.DOCTORS;
+            bottomNav.setSelectedItemId(selectedTab);
         } else {
-            // Tras rotar, el FragmentManager restaura el fragmento y la selección del
-            // menú, pero NO el título de la toolbar: se quedaría con el nombre de la
-            // app hasta que el usuario tocara otra pestaña.
-            toolbar.setTitle(Navigator.titleForTab(bottomNav.getSelectedItemId()));
+            // Al rotar, el FragmentManager ya restauró el fragmento, pero NO el
+            // título de la toolbar. Y no sirve leer bottomNav.getSelectedItemId():
+            // el BottomNavigationView restaura su propio estado MÁS TARDE que
+            // onCreate, así que aquí todavía devolvería la primera pestaña.
+            // Por eso la pestaña se guarda y se restaura explícitamente.
+            selectedTab = savedInstanceState.getInt(STATE_SELECTED_TAB, Routes.Tab.DOCTORS);
+            toolbar.setTitle(Navigator.titleForTab(selectedTab));
+
+            restoringState = true;
+            bottomNav.setSelectedItemId(selectedTab);
+            restoringState = false;
         }
     }
 
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(STATE_SELECTED_TAB, selectedTab);
+    }
+
     private boolean onNavItemSelected(@NonNull MenuItem item) {
-        int id = item.getItemId();
-        Fragment fragment = Navigator.fragmentForTab(id);
+        selectedTab = item.getItemId();
+        toolbar.setTitle(Navigator.titleForTab(selectedTab));
+
+        if (restoringState) {
+            // El fragmento correcto ya está montado por el FragmentManager.
+            return true;
+        }
+
+        Fragment fragment = Navigator.fragmentForTab(selectedTab);
         if (fragment == null) {
             return false;
         }
-        toolbar.setTitle(Navigator.titleForTab(id));
         getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
