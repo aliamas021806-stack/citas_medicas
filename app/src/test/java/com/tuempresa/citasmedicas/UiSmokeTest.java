@@ -199,4 +199,29 @@ public class UiSmokeTest {
         session.logout();
         assertNull(session.getUser());
     }
+
+    @Test
+    public void navegadorAbreElDetalleConElDoctor() {
+        // Integración real: Navigator -> Intent -> DoctorDetailActivity.
+        com.tuempresa.citasmedicas.model.Doctor doctor =
+                com.tuempresa.citasmedicas.data.mock.MockData.getDoctorById("doc_02");
+        assertNotNull(doctor);
+
+        Context appContext = ApplicationProvider.getApplicationContext();
+        android.content.Intent intent = new android.content.Intent(appContext, DoctorDetailActivity.class);
+        com.tuempresa.citasmedicas.navigation.Routes.DoctorDetail route =
+                new com.tuempresa.citasmedicas.navigation.Routes.DoctorDetail(doctor);
+        intent.putExtra(com.tuempresa.citasmedicas.navigation.Routes.ARG_DOCTOR, route.doctor());
+
+        ActivityController<DoctorDetailActivity> controller =
+                Robolectric.buildActivity(DoctorDetailActivity.class, intent).setup();
+        DoctorDetailActivity activity = controller.get();
+
+        android.widget.TextView name = activity.findViewById(R.id.tvDoctorName);
+        assertNotNull(name);
+        // Si la clave del argumento estuviera desincronizada, la Activity se habría
+        // cerrado y este nombre estaría vacío.
+        assertTrue("El detalle no recibió el doctor: " + name.getText(),
+                name.getText().toString().contains("González"));
+    }
 }

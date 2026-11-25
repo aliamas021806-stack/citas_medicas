@@ -1,6 +1,5 @@
 package com.tuempresa.citasmedicas.view.main;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -24,9 +23,10 @@ import com.tuempresa.citasmedicas.R;
 import com.tuempresa.citasmedicas.model.Doctor;
 import com.tuempresa.citasmedicas.model.Specialty;
 import com.tuempresa.citasmedicas.model.User;
+import com.tuempresa.citasmedicas.navigation.Navigator;
+import com.tuempresa.citasmedicas.navigation.Routes;
 import com.tuempresa.citasmedicas.util.Resource;
 import com.tuempresa.citasmedicas.util.SessionManager;
-import com.tuempresa.citasmedicas.view.appointment.DoctorDetailActivity;
 import com.tuempresa.citasmedicas.viewmodel.DoctorViewModel;
 
 import java.util.List;
@@ -159,8 +159,6 @@ public class DoctorsFragment extends Fragment {
     }
 
     private void onDoctorSelected(Doctor doctor) {
-        Intent intent = new Intent(requireContext(), DoctorDetailActivity.class);
-        intent.putExtra(DoctorDetailActivity.EXTRA_DOCTOR, doctor);
-        startActivity(intent);
+        Navigator.navigate(requireActivity(), new Routes.DoctorDetail(doctor));
     }
 }

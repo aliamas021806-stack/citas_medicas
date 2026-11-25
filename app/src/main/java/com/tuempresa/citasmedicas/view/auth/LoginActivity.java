@@ -1,6 +1,5 @@
 package com.tuempresa.citasmedicas.view.auth;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -18,7 +17,8 @@ import com.tuempresa.citasmedicas.R;
 import com.tuempresa.citasmedicas.model.User;
 import com.tuempresa.citasmedicas.util.Resource;
 import com.tuempresa.citasmedicas.util.SessionManager;
-import com.tuempresa.citasmedicas.view.main.MainActivity;
+import com.tuempresa.citasmedicas.navigation.Navigator;
+import com.tuempresa.citasmedicas.navigation.Routes;
 import com.tuempresa.citasmedicas.viewmodel.AuthViewModel;
 
 /**
@@ -136,10 +136,7 @@ public class LoginActivity extends AppCompatActivity {
         Toast.makeText(this,
                 isRegisterMode ? R.string.welcome_register : R.string.welcome_login,
                 Toast.LENGTH_SHORT).show();
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+        Navigator.navigateClearingStack(this, new Routes.Main(Routes.Tab.DOCTORS));
     }
 
     private void setLoading(boolean loading) {

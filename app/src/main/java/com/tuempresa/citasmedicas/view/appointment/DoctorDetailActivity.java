@@ -40,7 +40,12 @@ import java.util.List;
  */
 public class DoctorDetailActivity extends AppCompatActivity {
 
-    public static final String EXTRA_DOCTOR = "extra_doctor";
+    /**
+     * Clave del argumento del doctor. Apunta a {@link Routes#ARG_DOCTOR} para que
+     * el {@code Navigator} y esta pantalla no puedan desincronizarse (si cambian,
+     * la Activity recibiria null y se cerraria al instante).
+     */
+    public static final String EXTRA_DOCTOR = com.tuempresa.citasmedicas.navigation.Routes.ARG_DOCTOR;
     /** Paciente por defecto usado para recuperar la edad desde la API mock. */
     private static final String DEFAULT_PATIENT_ID = "pat_01";
 
