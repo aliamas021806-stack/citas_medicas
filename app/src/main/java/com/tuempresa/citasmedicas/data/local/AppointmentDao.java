@@ -32,6 +32,15 @@ public interface AppointmentDao {
     @Query("UPDATE appointments SET status = :status WHERE id = :id")
     void updateStatus(long id, String status);
 
+    /**
+     * Guarda el id que asignó Firestore al documento de esta cita.
+     * <p>
+     * Se usa después de subirla, para no volver a crearla (duplicaría la cita en la
+     * nube) y para poder borrarla allí si se elimina aquí.
+     */
+    @Query("UPDATE appointments SET remote_id = :remoteId WHERE id = :id")
+    void updateRemoteId(long id, String remoteId);
+
     @Query("SELECT COUNT(*) FROM appointments WHERE status = 'Confirmed'")
     int countConfirmed();
 }

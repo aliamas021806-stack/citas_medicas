@@ -202,7 +202,7 @@ limpio con **JDK 21** y **Android SDK 34**:
 | Comprobación | Resultado |
 |---|---|
 | Compilación (`assembleDebug` / `assembleRelease` / `bundleRelease`) | ✅ **BUILD SUCCESSFUL** |
-| Pruebas automatizadas | ✅ **177 tests · 0 fallos · 0 errores** |
+| Pruebas automatizadas | ✅ **203 tests · 0 fallos · 0 errores** |
 | Android Lint | ✅ **0 problemas** (`No issues found`) |
 | Archivos Kotlin (`.kt` / `.kts`) | ✅ **0** — proyecto 100% Java |
 | APK release | 5.4 MB · firmado · instalable |
@@ -308,7 +308,7 @@ Sin tocar Firebase todavía, se dejó la estructura lista y verificada:
       `data.local` desde la UI o el dominio, o a instanciar repositorios concretos
       en un ViewModel.
 
-**Resultado:** 158 tests, 0 fallos; 0 incidencias de Lint; 0 archivos Kotlin.
+**Resultado:** 203 tests, 0 fallos; 0 incidencias de Lint; 0 archivos Kotlin.
 La app funciona exactamente igual que antes.
 
 ### ✅ Fases 1 y 2 — Implementadas (Firebase por REST)
@@ -340,21 +340,41 @@ a hoy). En la pantalla de **Perfil** aparece un chip que indica el origen de dat
 | `python3 tools/configurar_firebase.py ruta/google-services.json` | Extrae las credenciales del archivo y las guarda en `local.properties` (valida el `package_name`) |
 | `python3 tools/configurar_firebase.py --project ID --key API_KEY` | Misma cosa, pero escribiendo los 2 datos a mano |
 | `python3 tools/verificar_firebase.py` | **Prueba la conexión** y lista las colecciones y los campos reales de tu Firestore |
+| `python3 tools/cargar_colecciones.py` | Carga especialidades, doctores y pacientes de ejemplo en Firestore (23 documentos) |
 
 `tools/verificar_firebase.py` es el que responde a "¿está bien conectada mi base de
 datos?" sin compilar nada: consulta el proyecto, dice si responde y traduce cada
 error de Google (403 de reglas, 403 de clave, 404, proyecto inexistente) a un paso
 concreto en español.
 
-#### Pendiente (Fase 3)
+### ✅ Fase 3 — Sincronización de citas (implementada)
 
-- [ ] **Citas en Firestore:** no se sustituye `AppointmentRepository`. Añadir un
-      sincronizador (`AppointmentSyncWorker`) que lea del DAO
-      (`getDaoForSync()`) y empuje a Firestore. Room sigue siendo la fuente de verdad
-      de la UI (reactividad + offline).
+Las citas que se agendan en la app **ya se guardan en Firestore**, en la colección
+`appointments`. La pieza es `data/firebase/FirestoreAppointmentRepository.java`:
+
+| Paso | Qué ocurre |
+|---|---|
+| 1 | La cita se guarda en **Room** primero (la UI se actualiza al instante y funciona sin internet) |
+| 2 | Se responde al usuario con el id local: la cita ya está agendada |
+| 3 | En paralelo se **empuja a Firestore** (`appointments`) |
+| 4 | Si Firestore acepta, se guarda su id en la columna `remote_id` para no duplicar |
+
+**Por qué Room sigue siendo la fuente de verdad:** da reactividad inmediata y permite
+agendar sin conexión. Firestore es *adicional*, no un sustituto: si la nube falla, la
+cita sigue existiendo en el móvil y sólo queda pendiente de subir.
+
+**Migración de base de datos:** la versión de Room sube a **2** con una migración
+explícita que añade `remote_id` sin borrar las citas existentes.
+
+#### Pendiente (futuro)
+
+- [ ] **Reintento de subidas fallidas:** hoy si no hay internet al agendar, la cita
+      queda en el móvil pero no se reintenta sola. Falta un `WorkManager`.
+- [ ] **Borrado remoto:** al eliminar una cita se registra en el log, pero falta el
+      `DELETE` contra Firestore.
 - [ ] **Horarios:** hoy se calculan en local. Migrarlos requiere modelar la ocupación
       por doctor en Firestore.
-- [ ] Reglas de seguridad definitivas (`allow read: if request.auth != null`).
+- [ ] Reglas de seguridad definitivas (`allow read, write: if request.auth != null`).
 - [ ] **No usar `orderBy()` con `where()`** sin índices compuestos: filtrar y ordenar
       en memoria, como ya hace el repositorio.
 

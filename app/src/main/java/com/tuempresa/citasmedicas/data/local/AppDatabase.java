@@ -2,9 +2,11 @@ package com.tuempresa.citasmedicas.data.local;
 
 import android.content.Context;
 
+import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
+import androidx.room.migration.Migration;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import java.util.concurrent.ExecutorService;
@@ -12,8 +14,14 @@ import java.util.concurrent.Executors;
 
 /**
  * Base de datos local Room (SQLite) para las citas médicas.
+ * <p>
+ * <b>Versión 2.</b> Se añadió la columna {@code remote_id} (id del documento en
+ * Firestore, para no duplicar la cita en la nube). Se incluye una
+ * {@link Migration} explícita en lugar de confiar sólo en
+ * {@code fallbackToDestructiveMigration()}: así las citas que ya tenga el usuario
+ * <b>no se borran</b> al actualizar la app.
  */
-@Database(entities = {AppointmentEntity.class}, version = 1, exportSchema = false)
+@Database(entities = {AppointmentEntity.class}, version = 2, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     public abstract AppointmentDao appointmentDao();
@@ -23,6 +31,21 @@ public abstract class AppDatabase extends RoomDatabase {
     public static final ExecutorService databaseWriteExecutor =
             Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
+    /**
+     * Migración 1 → 2: añade {@code remote_id} sin perder las citas existentes.
+     * <p>
+     * {@code defaultValue = ""} en la entidad es imprescindible para que el
+     * {@code ALTER TABLE} funcione en SQLite con filas ya existentes: una columna
+     * {@code NOT NULL} nueva necesita un valor por defecto.
+     */
+    public static final Migration MIGRACION_1_2 = new Migration(1, 2) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL("ALTER TABLE appointments ADD COLUMN remote_id TEXT NOT NULL "
+                    + "DEFAULT ''");
+        }
+    };
+
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
             synchronized (AppDatabase.class) {
@@ -31,6 +54,7 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "citas_medicas.db")
+                            .addMigrations(MIGRACION_1_2)
                             .fallbackToDestructiveMigration()
                             .addCallback(SEED_CALLBACK)
                             .build();

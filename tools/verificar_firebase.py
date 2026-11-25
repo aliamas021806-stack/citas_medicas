@@ -104,6 +104,22 @@ def explicar(codigo, cuerpo):
     if codigo == 0:
         return "Sin conexión a internet o el dominio firestore.googleapis.com está bloqueado."
 
+    # ── Base de datos sin crear (el caso más frecuente) ─────────────
+    # IMPORTANTE: este error llega como 404, igual que un Project ID inexistente.
+    # Hay que distinguirlos por el mensaje, porque la solución es muy distinta.
+    if "does not exist" in minus and "database" in minus:
+        return (
+            "La base de datos Firestore NO está creada en este proyecto.\n"
+            "     El Project ID y la API Key SÍ son correctos: Google reconoce el\n"
+            "     proyecto. Lo que falta es el paso de creación de la base.\n"
+            "     Solución (2 minutos):\n"
+            "       1. Ve a https://console.firebase.google.com/\n"
+            "       2. Elige tu proyecto\n"
+            "       3. Menú Build -> Firestore Database -> 'Crear base de datos'\n"
+            "       4. Elige ubicación y modo (de prueba, para empezar)\n"
+            "     Sin este paso no hay colecciones que mostrar ni datos que guardar."
+        )
+
     # ── Clave incorrecta ────────────────────────────────────────────
     if "api key not valid" in minus or "api_key_invalid" in minus:
         return ("La API Key NO es válida. Cópiala otra vez desde Firebase Console →\n"

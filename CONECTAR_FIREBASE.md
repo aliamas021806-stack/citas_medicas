@@ -77,6 +77,61 @@ La salida te dice exactamente en qué estado está todo:
 
 ---
 
+## 🚨 Antes de nada: crea la base de datos (sólo se hace una vez)
+
+**Tener el proyecto NO es tener la base de datos.** Son dos pasos distintos y el
+segundo sólo puedes hacerlo tú desde la consola (Google exige una cuenta con permisos
+de propietario; una API Key no puede crear bases de datos).
+
+Si no haces esto, verás el error:
+
+```
+404  The database (default) does not exist for project ...
+```
+
+**Pasos (2 minutos):**
+
+1. Entra en https://console.firebase.google.com/ y elige tu proyecto.
+2. Menú **Build → Firestore Database** → botón **Crear base de datos**.
+3. Elige ubicación (la más cercana) y **modo de prueba** para empezar.
+4. Menú **Build → Authentication** → **Comenzar** → activa
+   **Correo electrónico/contraseña**.
+5. En **Firestore → Reglas**, mientras desarrollas usa:
+
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /{document=*} {
+         allow read, write: if true;
+       }
+     }
+   }
+   ```
+
+Sin el paso 2 **no hay colecciones que ver** ni datos que guardar: la consola aparece
+vacía porque no existe el contenedor, no porque falten datos.
+
+---
+
+## 📥 Cargar las colecciones iniciales
+
+Con la base ya creada, un solo comando rellena `specialties`, `doctors` y `patients`
+con datos coherentes con lo que espera la app:
+
+```bash
+python3 tools/cargar_colecciones.py
+```
+
+Escribe **23 documentos** (8 especialidades, 10 doctores, 5 pacientes) con los nombres
+de campo exactos que lee `FirestoreMapper.java`. Es idempotente: se puede ejecutar
+varias veces sin duplicar (usa `PATCH` con id fijo, no `POST`).
+
+> **`appointments` no se carga desde el script.** Esa colección la escribe la propia
+> app cada vez que agendas una cita: es la prueba de que la conexión funciona.
+
+---
+
 ## 📋 Los 3 datos que necesito
 
 | # | Dato | Ejemplo | ¿Obligatorio? |

@@ -124,12 +124,27 @@ public class FirebaseRestTest {
     }
 
     @Test
-    public void elRepositorioDeCitasNuncaSeSustituyePorFirestore() {
-        // Room es la fuente de verdad de la UI: debe seguir siendo local siempre.
+    public void elRepositorioDeCitasSiempreGuardaEnRoom() {
+        // Room sigue siendo la fuente de verdad de la UI: con Firebase, el repositorio
+        // de citas es un decorador que escribe en Room PRIMERO y luego empuja a
+        // Firestore. Sin Firebase, es directamente el de Room.
         Object repo = RepositoryProvider.appointments(RuntimeEnvironment.getApplication());
         assertNotNull(repo);
-        assertTrue("El repositorio de citas debe seguir siendo el de Room",
-                repo instanceof com.tuempresa.citasmedicas.data.repository.AppointmentRepository);
+
+        if (FirebaseConfig.isEnabled()) {
+            assertTrue("Con Firebase, las citas deben usar el sincronizador "
+                            + "(Room + Firestore), no el local a secas",
+                    repo instanceof com.tuempresa.citasmedicas.data.firebase
+                            .FirestoreAppointmentRepository);
+            // Pero debe seguir exponiendo el flujo reactivo de Room.
+            assertNotNull("La UI debe seguir observando Room (LiveData)",
+                    ((com.tuempresa.citasmedicas.domain.repository.IAppointmentRepository) repo)
+                            .observeAll());
+        } else {
+            assertTrue("Sin Firebase, las citas deben seguir siendo Room puro",
+                    repo instanceof com.tuempresa.citasmedicas.data.repository
+                            .AppointmentRepository);
+        }
     }
 
     @Test

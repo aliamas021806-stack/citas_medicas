@@ -20,6 +20,14 @@ public class Appointment implements Serializable {
     private String reason;
     private long createdAt;
 
+    /**
+     * Id del documento en Firestore, si la cita se llegó a subir.
+     * <p>
+     * La UI no lo necesita: existe para que el repositorio no duplique el
+     * documento en la nube y sepa qué borrar allí.
+     */
+    private String remoteId;
+
     public Appointment() {
     }
 
@@ -64,6 +72,9 @@ public class Appointment implements Serializable {
     public void setReason(String reason) { this.reason = reason; }
     public long getCreatedAt() { return createdAt; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
+
+    public String getRemoteId() { return remoteId; }
+    public void setRemoteId(String remoteId) { this.remoteId = remoteId; }
 
     public boolean isCancellable() {
         return status == AppointmentStatus.CONFIRMED || status == AppointmentStatus.PENDING;

@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import com.tuempresa.citasmedicas.data.firebase.FirebaseAuthFallback;
 import com.tuempresa.citasmedicas.data.firebase.FirebaseAuthRepository;
 import com.tuempresa.citasmedicas.data.firebase.FirebaseConfig;
+import com.tuempresa.citasmedicas.data.firebase.FirestoreAppointmentRepository;
 import com.tuempresa.citasmedicas.data.firebase.FirestoreDoctorRepository;
 import com.tuempresa.citasmedicas.data.firebase.FirestoreFallback;
 import com.tuempresa.citasmedicas.data.firebase.FirestorePatientRepository;
@@ -126,14 +127,22 @@ public final class RepositoryProvider {
     /**
      * Citas médicas.
      * <p>
-     * <b>Deliberadamente NO usa Firebase.</b> Room es la fuente de verdad de la UI:
-     * es lo que da reactividad ({@code LiveData} que emite al insertar o cancelar) y
-     * lo que hace que la app funcione sin internet. Firestore se conectará más
-     * adelante como capa de sincronización usando
-     * {@link AppointmentRepository#getDaoForSync()}.
+     * <b>Room es la fuente de verdad, Firestore se añade encima.</b> Con Firebase
+     * configurado se devuelve {@link FirestoreAppointmentRepository}, que guarda en
+     * Room primero (reactividad inmediata y funcionamiento sin internet) y <i>además</i>
+     * empuja la cita a la colección {@code appointments} de Firestore. Así las citas
+     * que se crean en la app aparecen en la consola de Firebase, que es lo que se
+     * espera de una app "conectada a la base de datos".
+     * <p>
+     * Sin credenciales se devuelve el repositorio puramente local: idéntico al
+     * comportamiento anterior. La UI no cambia en ninguno de los dos casos, porque
+     * ambos implementan {@link IAppointmentRepository}.
      */
     @NonNull
     public static IAppointmentRepository appointments(@NonNull Context context) {
+        if (FirebaseConfig.isEnabled()) {
+            return new FirestoreAppointmentRepository(context.getApplicationContext());
+        }
         return new AppointmentRepository(context.getApplicationContext());
     }
 }

@@ -44,4 +44,18 @@ public class AppointmentEntity {
 
     @ColumnInfo(name = "created_at")
     public long createdAt;
+
+    /**
+     * Id del documento en Firestore, si la cita llegó a subirse.
+     * <p>
+     * Sirve para dos cosas: no volver a crear el documento (duplicaría la cita en la
+     * nube) y saber qué borrar allí si la cita se elimina aquí. Vacío {@code ""}
+     * significa "todavía no está en la nube", que es el estado normal cuando se agenda
+     * sin internet.
+     * <p>
+     * Se añadió en la versión 2 de la base de datos (ver {@code AppDatabase}).
+     */
+    @NonNull
+    @ColumnInfo(name = "remote_id", defaultValue = "")
+    public String remoteId = "";
 }
