@@ -12,19 +12,19 @@ necesidad de Android Studio, sin emulador y sin conocimientos técnicos.
 
 **Descarga directa (no hace falta cuenta de GitHub):**
 
-### 👉 [Descargar CitasMedicas-v4.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v4.0/CitasMedicas-v4.0.apk)
+### 👉 [Descargar CitasMedicas-v5.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v5.0/CitasMedicas-v5.0.apk)
 
-- Tamaño: **5.4 MB** (5 653 453 bytes)
-- Versión: **4.0** (versionCode 4)
+- Tamaño: **5.4 MB** (5 659 699 bytes)
+- Versión: **5.0** (versionCode 5)
 - Requisito: **Android 7.0 o superior** (API 24+)
 - Firmado con certificado de release ✅
 
 > ⚠️ **La v3.0 está obsoleta.** Es anterior a la integración de Firebase: no
-> sincroniza las citas con la base de datos. Descarga siempre la **v4.0**.
+> sincroniza las citas con la base de datos. Descarga siempre la **v5.0**.
 
 > Si prefieres ver todas las versiones, entra en
 > [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) o en la
-> [página de la release v4.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v4.0).
+> [página de la release v5.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v5.0).
 
 ---
 
@@ -47,7 +47,7 @@ Toca **"Instalar de todas formas"**.
 Con el teléfono conectado por USB y la *Depuración USB* activada:
 
 ```bash
-adb install CitasMedicas-v4.0.apk
+adb install CitasMedicas-v5.0.apk
 ```
 
 ---
@@ -112,7 +112,7 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 - **Aquí puedes comprobar la versión:** bajo tu correo hay una etiqueta gris.
   Debe decir **«Conectado a Firebase (citas-medicas-e19ca)»**.
   Si dice **«Datos de prueba (sin base de datos)»**, tienes instalada una versión
-  antigua (v3.0 o anterior): desinstálala e instala la **v4.0**.
+  antigua (v3.0 o anterior): desinstálala e instala la **v5.0**.
 - Los contadores muestran **citas próximas** y **total**.
 
 ### 5. Persistencia (punto importante)
@@ -132,7 +132,7 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 
 | Punto | Detalle |
 |---|---|
-| **Ya hay backend real** | La v4.0 está conectada a **Firebase** (Authentication + Cloud Firestore). El catálogo de doctores y pacientes se lee de Firestore. |
+| **Ya hay backend real** | La v5.0 está conectada a **Firebase** (Authentication + Cloud Firestore). El catálogo de doctores y pacientes se lee de Firestore. |
 | **La contraseña SÍ se valida en el servidor** | El login se resuelve contra Firebase Authentication. Si la cuenta no existe, la app lo dice. |
 | **Internet** | Hace falta para **registrarse y entrar**. Ya dentro, la app funciona sin conexión: las citas se guardan en SQLite y el catálogo usa el respaldo local. |
 | **Datos de ejemplo** | El sembrado de "Mis Citas" se hace una única vez, la primera vez que se abre la app. |
@@ -148,24 +148,24 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 
 Si quieres comprobar que el archivo descargado es exactamente el que generó la CI:
 
-**SHA-256** (versión 4.0, APK publicado en la release `v4.0`):
+**SHA-256** (versión 5.0, APK publicado en la release `v5.0`):
 
 ```
-60590ad87009804088c58f58df885293bd9350c93090c72edf8409e092df9347
+c11be226dac0d5e2f0e4d6a574614c99c7a0dfe5c61a467a90ac643dfc5d6b5b
 ```
 
-Tamaño exacto: **5 653 453 bytes** (5.4 MB).
+Tamaño exacto: **5 659 699 bytes** (5.4 MB).
 
 Comprobar en Linux/macOS:
 
 ```bash
-sha256sum CitasMedicas-v4.0.apk
+sha256sum CitasMedicas-v5.0.apk
 ```
 
 En Windows (PowerShell):
 
 ```powershell
-Get-FileHash CitasMedicas-v4.0.apk -Algorithm SHA256
+Get-FileHash CitasMedicas-v5.0.apk -Algorithm SHA256
 ```
 
 Los dos valores deben coincidir.
