@@ -494,6 +494,12 @@ public class FirebaseRestTest {
                 com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<Patient> cb) {
             cb.onError(mensaje);
         }
+
+        @Override
+        public void savePatient(Patient patient,
+                com.tuempresa.citasmedicas.domain.repository.RepositoryCallback<Void> cb) {
+            cb.onError(mensaje);
+        }
     }
 
     /** Repositorio de prueba que devuelve una lista vacía (colección sin datos). */

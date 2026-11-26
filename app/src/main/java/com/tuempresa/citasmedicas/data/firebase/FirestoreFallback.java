@@ -226,6 +226,17 @@ public final class FirestoreFallback {
                             }
                         });
             }
+
+            /**
+             * Guardar el expediente no tiene respaldo local que tenga sentido: se
+             * intenta en Firestore y, si falla, el perfil sigue funcionando porque se
+             * pinta desde la sesión del dispositivo.
+             */
+            @Override
+            public void savePatient(@NonNull Patient patient,
+                                    @NonNull RepositoryCallback<Void> callback) {
+                remoto.savePatient(patient, callback);
+            }
         };
     }
 

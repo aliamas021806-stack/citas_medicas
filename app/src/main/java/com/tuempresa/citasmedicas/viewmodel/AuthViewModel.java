@@ -60,8 +60,22 @@ public class AuthViewModel extends AndroidViewModel {
     }
 
     public void register(String fullName, String email, String password, int age) {
+        register(fullName, null, email, password, age, null, null, null, null);
+    }
+
+    /**
+     * Registro con el expediente del paciente.
+     * <p>
+     * El teléfono, el grupo sanguíneo, la aseguradora y las alergias los escribe el
+     * usuario; así el perfil muestra sus datos y no los aleatorios del mock.
+     */
+    public void register(String fullName, String lastName, String email, String password,
+                         int age, String phone, String bloodType, String insurance,
+                         String allergies) {
         authState.setValue(Resource.loading());
-        registerUseCase.execute(new AuthRequest(fullName, email, password, age),
+        registerUseCase.execute(
+                new AuthRequest(fullName, lastName, email, password, age, phone,
+                        bloodType, insurance, allergies),
                 new UseCase.Callback<User>() {
                     @Override
                     public void onSuccess(User result) {

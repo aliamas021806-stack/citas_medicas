@@ -15,6 +15,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.tuempresa.citasmedicas.R;
 import com.tuempresa.citasmedicas.model.User;
+import com.tuempresa.citasmedicas.util.AuthValidator;
 import com.tuempresa.citasmedicas.util.Resource;
 import com.tuempresa.citasmedicas.util.SessionManager;
 import com.tuempresa.citasmedicas.navigation.Navigator;
@@ -22,13 +23,18 @@ import com.tuempresa.citasmedicas.navigation.Routes;
 import com.tuempresa.citasmedicas.viewmodel.AuthViewModel;
 
 /**
- * Pantalla de Login / Registro simulado (View). Incluye la EDAD del paciente
- * en el registro.
+ * Pantalla de Login / Registro (View).
+ * <p>
+ * En modo registro pide los datos del <b>expediente</b> del paciente (nombre,
+ * apellidos, edad, teléfono, grupo sanguíneo, aseguradora y alergias) para que el
+ * perfil muestre información real en lugar de datos aleatorios del mock.
  */
 public class LoginActivity extends AppCompatActivity {
 
-    private TextInputLayout tilName, tilAge;
-    private TextInputEditText etName, etAge, etEmail, etPassword;
+    private TextInputLayout tilName, tilLastName, tilAge, tilPhone, tilBloodType,
+            tilInsurance, tilAllergies;
+    private TextInputEditText etName, etLastName, etAge, etPhone, etBloodType,
+            etInsurance, etAllergies, etEmail, etPassword;
     private MaterialButton btnSubmit;
     private ProgressBar progressBar;
     private TextView tvToggle, tvError;
@@ -52,9 +58,19 @@ public class LoginActivity extends AppCompatActivity {
 
     private void bindViews() {
         tilName = findViewById(R.id.tilName);
+        tilLastName = findViewById(R.id.tilLastName);
         tilAge = findViewById(R.id.tilAge);
+        tilPhone = findViewById(R.id.tilPhone);
+        tilBloodType = findViewById(R.id.tilBloodType);
+        tilInsurance = findViewById(R.id.tilInsurance);
+        tilAllergies = findViewById(R.id.tilAllergies);
         etName = findViewById(R.id.etName);
+        etLastName = findViewById(R.id.etLastName);
         etAge = findViewById(R.id.etAge);
+        etPhone = findViewById(R.id.etPhone);
+        etBloodType = findViewById(R.id.etBloodType);
+        etInsurance = findViewById(R.id.etInsurance);
+        etAllergies = findViewById(R.id.etAllergies);
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         btnSubmit = findViewById(R.id.btnSubmit);
@@ -63,34 +79,45 @@ public class LoginActivity extends AppCompatActivity {
         tvError = findViewById(R.id.tvError);
     }
 
+    /** Campos que sólo existen en modo registro. */
+    private TextInputLayout[] camposDeRegistro() {
+        return new TextInputLayout[]{tilName, tilLastName, tilAge, tilPhone,
+                tilBloodType, tilInsurance, tilAllergies};
+    }
+
     private void toggleMode() {
         isRegisterMode = !isRegisterMode;
-        if (isRegisterMode) {
-            tilName.setVisibility(View.VISIBLE);
-            tilAge.setVisibility(View.VISIBLE);
-            btnSubmit.setText(R.string.register_button);
-            tvToggle.setText(R.string.toggle_login);
-        } else {
-            tilName.setVisibility(View.GONE);
-            tilAge.setVisibility(View.GONE);
-            btnSubmit.setText(R.string.login_button);
-            tvToggle.setText(R.string.toggle_register);
+        int visibilidad = isRegisterMode ? View.VISIBLE : View.GONE;
+        for (TextInputLayout campo : camposDeRegistro()) {
+            if (campo != null) {
+                campo.setVisibility(visibilidad);
+            }
         }
+        btnSubmit.setText(isRegisterMode ? R.string.register_button : R.string.login_button);
+        tvToggle.setText(isRegisterMode ? R.string.toggle_login : R.string.toggle_register);
         hideError();
     }
 
+    private String textoDe(TextInputEditText campo) {
+        if (campo == null || campo.getText() == null) {
+            return "";
+        }
+        return campo.getText().toString().trim();
+    }
+
     private void submit() {
-        String email = etEmail.getText() != null ? etEmail.getText().toString().trim() : "";
-        String password = etPassword.getText() != null ? etPassword.getText().toString() : "";
+        String email = textoDe(etEmail);
+        String password = etPassword != null && etPassword.getText() != null
+                ? etPassword.getText().toString() : "";
         hideError();
 
         if (isRegisterMode) {
-            String name = etName.getText() != null ? etName.getText().toString().trim() : "";
+            String name = textoDe(etName);
             if (TextUtils.isEmpty(name)) {
                 showError(getString(R.string.error_name_required));
                 return;
             }
-            String ageStr = etAge.getText() != null ? etAge.getText().toString().trim() : "";
+            String ageStr = textoDe(etAge);
             int age = 0;
             if (!TextUtils.isEmpty(ageStr)) {
                 try {
@@ -103,7 +130,15 @@ public class LoginActivity extends AppCompatActivity {
                 showError(getString(R.string.error_age_invalid));
                 return;
             }
-            viewModel.register(name, email, password, age);
+            // El teléfono se escribe a mano: antes lo inventaba el mock.
+            String phone = textoDe(etPhone);
+            String errorTelefono = AuthValidator.validateMedicalRecord(phone);
+            if (errorTelefono != null) {
+                showError(errorTelefono);
+                return;
+            }
+            viewModel.register(name, textoDe(etLastName), email, password, age, phone,
+                    textoDe(etBloodType), textoDe(etInsurance), textoDe(etAllergies));
         } else {
             viewModel.login(email, password);
         }

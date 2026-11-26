@@ -199,13 +199,17 @@ public class SyncCitasFirestoreTest {
         String base = leerFuente(
                 "src/main/java/com/tuempresa/citasmedicas/data/local/AppDatabase.java",
                 "app/src/main/java/com/tuempresa/citasmedicas/data/local/AppDatabase.java");
-        assertTrue("La base debe estar en la versión 2", base.contains("version = 2"));
+        assertTrue("La base debe estar en la versión 3", base.contains("version = 3"));
         assertTrue("Debe existir una migración 1 -> 2",
                 base.contains("MIGRACION_1_2"));
+        assertTrue("Debe existir una migración 2 -> 3 (owner_id)",
+                base.contains("MIGRACION_2_3"));
+        assertTrue("La migración 2 -> 3 debe añadir owner_id",
+                base.contains("owner_id"));
         assertTrue("La migración debe añadir la columna sin borrar las citas",
                 base.contains("ALTER TABLE appointments ADD COLUMN remote_id"));
         assertTrue("La migración debe estar registrada en el builder",
-                base.contains("addMigrations(MIGRACION_1_2)"));
+                base.contains("addMigrations(MIGRACION_1_2, MIGRACION_2_3)"));
     }
 
     /** Lee un archivo fuente probando las dos raíces posibles del directorio de trabajo. */

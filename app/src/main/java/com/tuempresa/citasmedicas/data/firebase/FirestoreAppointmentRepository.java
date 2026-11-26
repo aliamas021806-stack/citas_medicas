@@ -63,7 +63,17 @@ public class FirestoreAppointmentRepository implements IAppointmentRepository {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public FirestoreAppointmentRepository(@NonNull Context context) {
-        this.local = new AppointmentRepository(context.getApplicationContext());
+        this(context, com.tuempresa.citasmedicas.util.SessionManager
+                .getInstance(context).getUserId());
+    }
+
+    /**
+     * @param ownerId id del paciente en sesión: filtra sus citas en Room y se guarda
+     *                en el documento de Firestore para que cada usuario vea las suyas
+     */
+    public FirestoreAppointmentRepository(@NonNull Context context,
+                                          @androidx.annotation.Nullable String ownerId) {
+        this.local = new AppointmentRepository(context.getApplicationContext(), ownerId);
         this.api = FirestoreClient.getApi(context.getApplicationContext());
     }
 
@@ -326,6 +336,10 @@ public class FirestoreAppointmentRepository implements IAppointmentRepository {
                 a.getStatus() != null ? a.getStatus().getValue() : "Confirmed"));
         f.put("reason", FirestoreApi.ofString(a.getReason()));
         f.put("createdAt", FirestoreApi.ofInteger(a.getCreatedAt()));
+        // Dueño de la cita: permite filtrar por usuario y sirve de base para las
+        // reglas de seguridad de Firestore (request.auth.uid == resource.data.ownerId).
+        f.put("ownerId", FirestoreApi.ofString(
+                a.getOwnerId() != null ? a.getOwnerId() : ""));
 
         FirestoreApi.FirestoreDocument doc = new FirestoreApi.FirestoreDocument();
         doc.fields = f;

@@ -15,13 +15,16 @@ import java.util.concurrent.Executors;
 /**
  * Base de datos local Room (SQLite) para las citas médicas.
  * <p>
- * <b>Versión 2.</b> Se añadió la columna {@code remote_id} (id del documento en
- * Firestore, para no duplicar la cita en la nube). Se incluye una
- * {@link Migration} explícita en lugar de confiar sólo en
+ * <b>Versión 3.</b> Se añadió la columna {@code owner_id} (dueño de la cita) para
+ * que cada paciente vea sólo las suyas, y se <b>eliminó el sembrado de citas de
+ * ejemplo</b>: antes se insertaban 3 citas a nombre de "Laura Jiménez", de modo que
+ * un usuario recién registrado veía las citas de otra persona.
+ * <p>
+ * Se incluye una {@link Migration} explícita en lugar de confiar sólo en
  * {@code fallbackToDestructiveMigration()}: así las citas que ya tenga el usuario
  * <b>no se borran</b> al actualizar la app.
  */
-@Database(entities = {AppointmentEntity.class}, version = 2, exportSchema = false)
+@Database(entities = {AppointmentEntity.class}, version = 3, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     public abstract AppointmentDao appointmentDao();
@@ -46,6 +49,26 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 
+    /**
+     * Migración 2 → 3: añade {@code owner_id} y borra las citas de ejemplo.
+     * <p>
+     * Las filas que ya existían se quedan con {@code owner_id = ""}, así que dejan de
+     * mostrarse a cualquier usuario. Además se eliminan explícitamente las tres citas
+     * de demostración (doctor {@code doc_01}, {@code doc_02} y {@code doc_03}, todas a
+     * nombre de "Laura Jiménez") que versiones anteriores sembraban al arrancar.
+     */
+    public static final Migration MIGRACION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL("ALTER TABLE appointments ADD COLUMN owner_id TEXT NOT NULL "
+                    + "DEFAULT ''");
+            // Las citas de ejemplo nunca fueron del usuario: se descartan para que no
+            // aparezcan en "Mis Citas".
+            db.execSQL("DELETE FROM appointments WHERE patient_name = 'Laura Jiménez' "
+                    + "AND owner_id = ''");
+        }
+    };
+
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
             synchronized (AppDatabase.class) {
@@ -54,16 +77,9 @@ public abstract class AppDatabase extends RoomDatabase {
                                     context.getApplicationContext(),
                                     AppDatabase.class,
                                     "citas_medicas.db")
-                            .addMigrations(MIGRACION_1_2)
+                            .addMigrations(MIGRACION_1_2, MIGRACION_2_3)
                             .fallbackToDestructiveMigration()
-                            .addCallback(SEED_CALLBACK)
                             .build();
-                    // El seed se pide AQUÍ, cuando INSTANCE ya está asignado.
-                    // Antes se lanzaba desde onCreate(), que puede dispararse antes de
-                    // que la asignación termine: entonces INSTANCE era null dentro del
-                    // executor y el seed moría con NullPointerException, dejando la
-                    // base vacía y "Mis Citas" en blanco.
-                    seedIfEmpty();
                 }
             }
         }
@@ -71,79 +87,16 @@ public abstract class AppDatabase extends RoomDatabase {
     }
 
     /**
-     * Inserta las citas de ejemplo sólo si la base está vacía.
+     * Cierra y olvida la instancia abierta.
      * <p>
-     * Es idempotente: si el usuario ya tiene citas (o las borró a propósito) no
-     * vuelve a sembrar.
+     * Necesario en pruebas y al cerrar sesión si se quiere reabrir la base con otro
+     * usuario. El sembrado de citas de ejemplo ya <b>no existe</b>: cada cita nace del
+     * formulario del paciente y con su {@code owner_id}.
      */
-    private static void seedIfEmpty() {
-        final AppDatabase db = INSTANCE;
-        if (db == null) {
-            return;
+    public static synchronized void reset() {
+        if (INSTANCE != null) {
+            INSTANCE.close();
+            INSTANCE = null;
         }
-        databaseWriteExecutor.execute(() -> {
-            try {
-                AppointmentDao dao = db.appointmentDao();
-                if (!dao.getAllOnce().isEmpty()) {
-                    return;
-                }
-                java.util.List<String> dates =
-                        com.tuempresa.citasmedicas.data.mock.MockData.getSelectableDates();
-                if (dates.size() < 4) {
-                    // Sin fechas suficientes no se puede sembrar sin salir de rango.
-                    return;
-                }
-                for (AppointmentEntity cita : demoAppointments(dates)) {
-                    dao.insert(cita);
-                }
-            } catch (RuntimeException e) {
-                // Un fallo al sembrar nunca debe tumbar el arranque de la app.
-                if (android.util.Log.isLoggable("AppDatabase", android.util.Log.WARN)) {
-                    android.util.Log.w("AppDatabase", "No se pudo sembrar la base", e);
-                }
-            }
-        });
     }
-
-    /** Citas de ejemplo usadas la primera vez que se crea la base. */
-    private static java.util.List<AppointmentEntity> demoAppointments(
-            java.util.List<String> dates) {
-        java.util.List<AppointmentEntity> lista = new java.util.ArrayList<>(3);
-        lista.add(demoCita("doc_01", "Dr. Carlos Ramírez", "Cardiología",
-                dates.get(1), "10:00", "Confirmed", "Chequeo cardiológico anual"));
-        lista.add(demoCita("doc_02", "Dra. María González", "Pediatría",
-                dates.get(3), "16:00", "Confirmed", "Control de crecimiento"));
-        lista.add(demoCita("doc_03", "Dra. Andrea López", "Dermatología",
-                dates.get(0), "09:00", "Cancelled", "Revisión de lunar"));
-        return lista;
-    }
-
-    private static AppointmentEntity demoCita(String doctorId, String doctorName,
-                                              String specialtyName, String date,
-                                              String time, String status, String reason) {
-        AppointmentEntity a = new AppointmentEntity();
-        a.doctorId = doctorId;
-        a.doctorName = doctorName;
-        a.specialtyName = specialtyName;
-        a.patientName = "Laura Jiménez";
-        a.patientAge = 34;
-        a.date = date;
-        a.time = time;
-        a.status = status;
-        a.reason = reason;
-        a.createdAt = System.currentTimeMillis();
-        return a;
-    }
-
-    /**
-     * Callback vacío a propósito: mantiene el enganche de Room por si en el futuro
-     * hace falta reaccionar a onCreate/onOpen, pero YA NO siembra datos (lo hace
-     * {@link #seedIfEmpty()} cuando la instancia está disponible).
-     */
-    private static final RoomDatabase.Callback SEED_CALLBACK = new RoomDatabase.Callback() {
-        @Override
-        public void onCreate(SupportSQLiteDatabase db) {
-            super.onCreate(db);
-        }
-    };
 }

@@ -58,4 +58,20 @@ public class AppointmentEntity {
     @NonNull
     @ColumnInfo(name = "remote_id", defaultValue = "")
     public String remoteId = "";
+
+    /**
+     * Id del paciente <b>dueño</b> de la cita.
+     * <p>
+     * Es la clave que permite que cada usuario vea únicamente sus citas. Antes no
+     * existía: la tabla era única para toda la app, así que un paciente recién
+     * registrado veía las citas de otro (las de ejemplo, sembradas a nombre de
+     * "Laura Jiménez").
+     * <p>
+     * Vacío {@code ""} significa "cita antigua, sin dueño conocido": las filas que ya
+     * existieran antes de la versión 3 se migran con este valor y quedan ocultas,
+     * en lugar de mostrarse a cualquier usuario.
+     */
+    @NonNull
+    @ColumnInfo(name = "owner_id", defaultValue = "")
+    public String ownerId = "";
 }

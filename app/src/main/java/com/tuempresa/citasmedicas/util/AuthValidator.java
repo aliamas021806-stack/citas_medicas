@@ -10,10 +10,19 @@ import java.util.regex.Pattern;
  */
 public final class AuthValidator {
 
+    /**
+     * Mínimo de contraseña para la validación local.
+     * <p>
+     * Firebase Authentication exige <b>6</b>; con Firebase conectado, una contraseña
+     * más corta la rechaza el servidor con su propio mensaje. Este mínimo local se
+     * mantiene en 4 para no invalidar cuentas creadas antes.
+     */
     public static final int MIN_PASSWORD_LENGTH = 4;
     public static final int MIN_AGE = 1;
     public static final int MAX_AGE = 120;
     public static final int MIN_NAME_LENGTH = 3;
+    /** Mínimo de dígitos de un teléfono (sin contar espacios, guiones ni el +). */
+    public static final int MIN_PHONE_DIGITS = 7;
 
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -36,6 +45,45 @@ public final class AuthValidator {
 
     public static boolean isValidAge(int age) {
         return age >= MIN_AGE && age <= MAX_AGE;
+    }
+
+    /**
+     * ¿El teléfono tiene pinta de número real?
+     * <p>
+     * Se cuentan sólo los dígitos, de modo que {@code +34 611 22 03 31},
+     * {@code 611-22-03-31} y {@code 611220331} son todos válidos.
+     */
+    public static boolean isValidPhone(String phone) {
+        if (isBlank(phone)) {
+            return false;
+        }
+        int digitos = 0;
+        for (int i = 0; i < phone.length(); i++) {
+            char c = phone.charAt(i);
+            if (Character.isDigit(c)) {
+                digitos++;
+            } else if (c != ' ' && c != '+' && c != '-' && c != '(' && c != ')') {
+                // Cualquier otro carácter (letras, símbolos) invalida el teléfono.
+                return false;
+            }
+        }
+        return digitos >= MIN_PHONE_DIGITS;
+    }
+
+    /**
+     * Valida el expediente médico que se pide al paciente.
+     *
+     * @return {@code null} si es válido, o el mensaje de error en español.
+     */
+    public static String validateMedicalRecord(String phone) {
+        if (isBlank(phone)) {
+            return "Ingresa tu número de teléfono";
+        }
+        if (!isValidPhone(phone)) {
+            return "El teléfono no es válido: escribe al menos "
+                    + MIN_PHONE_DIGITS + " dígitos";
+        }
+        return null;
     }
 
     /**

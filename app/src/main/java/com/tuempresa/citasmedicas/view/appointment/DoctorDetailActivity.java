@@ -46,9 +46,6 @@ public class DoctorDetailActivity extends AppCompatActivity {
      * la Activity recibiria null y se cerraria al instante).
      */
     public static final String EXTRA_DOCTOR = com.tuempresa.citasmedicas.navigation.Routes.ARG_DOCTOR;
-    /** Paciente por defecto usado para recuperar la edad desde la API mock. */
-    private static final String DEFAULT_PATIENT_ID = "pat_01";
-
     private Doctor doctor;
     private User sessionUser;
 
@@ -57,7 +54,6 @@ public class DoctorDetailActivity extends AppCompatActivity {
 
     private DoctorViewModel doctorViewModel;
     private AppointmentViewModel appointmentViewModel;
-    private PatientViewModel patientViewModel;
 
     private RecyclerView rvDates, rvSlots;
     private TextInputEditText etReason;
@@ -71,7 +67,6 @@ public class DoctorDetailActivity extends AppCompatActivity {
     /** Edad del paciente resuelta: primero desde la sesión, con respaldo en la API. */
     private int patientAge;
     /** Edad recibida desde la API mock (solo se usa si la sesión no la tiene). */
-    private int apiPatientAge;
     /** Nombre del paciente que se guardará en la cita. */
     private String patientName;
 
@@ -96,7 +91,6 @@ public class DoctorDetailActivity extends AppCompatActivity {
         setupLists();
         setupViewModels();
 
-        loadPatientFromApi();
         loadSlotsForSelectedDate(dateAdapter.getSelectedDate());
     }
 
@@ -145,11 +139,8 @@ public class DoctorDetailActivity extends AppCompatActivity {
     private void setupViewModels() {
         doctorViewModel = new ViewModelProvider(this).get(DoctorViewModel.class);
         appointmentViewModel = new ViewModelProvider(this).get(AppointmentViewModel.class);
-        patientViewModel = new ViewModelProvider(this).get(PatientViewModel.class);
 
         doctorViewModel.getSlots().observe(this, this::renderSlots);
-
-        patientViewModel.getPatient().observe(this, this::renderPatient);
 
         appointmentViewModel.getActionState().observe(this, this::renderAction);
         appointmentViewModel.getNavigateBack().observe(this, created -> {
@@ -162,27 +153,6 @@ public class DoctorDetailActivity extends AppCompatActivity {
                 finish();
             }
         });
-    }
-
-    /**
-     * Recupera la información del paciente (incluida su EDAD) desde la API mock.
-     * Si la API no responde, se conserva la edad de la sesión.
-     */
-    private void loadPatientFromApi() {
-        patientViewModel.loadPatient(DEFAULT_PATIENT_ID);
-    }
-
-    private void renderPatient(@Nullable Resource<Patient> resource) {
-        if (resource == null || resource.status != Resource.Status.SUCCESS || resource.data == null) {
-            return;
-        }
-        Patient patient = resource.data;
-        apiPatientAge = patient.getAge();
-        // La edad de la sesión (la que el usuario registró) tiene prioridad;
-        // la edad generada por IA en la API mock solo actúa como respaldo.
-        if (patientAge <= 0 && apiPatientAge > 0) {
-            patientAge = apiPatientAge;
-        }
     }
 
     private void loadSlotsForSelectedDate(@Nullable String date) {

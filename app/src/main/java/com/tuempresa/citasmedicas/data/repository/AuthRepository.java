@@ -3,6 +3,9 @@ package com.tuempresa.citasmedicas.data.repository;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.model.AuthRequest;
 import com.tuempresa.citasmedicas.model.User;
@@ -22,8 +25,6 @@ public class AuthRepository implements com.tuempresa.citasmedicas.domain.reposit
     private static final long FAKE_DELAY_MS = 900L;
     /** Edad por defecto "generada" para el login cuando no viene en la request. */
     private static final int DEFAULT_AGE = 30;
-    /** Teléfono simulado que devuelve el backend ficticio. */
-    private static final String FAKE_PHONE = "+34 600 123 456";
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -38,12 +39,19 @@ public class AuthRepository implements com.tuempresa.citasmedicas.domain.reposit
             }
             String name = deriveNameFromEmail(request.getEmail());
             int age = request.getAge() > 0 ? request.getAge() : DEFAULT_AGE;
-            User user = new User("user_01", name, request.getEmail(), FAKE_PHONE, age);
+            // El id se deriva del correo para que cada cuenta tenga su propio espacio
+            // de citas; antes era siempre "user_01" y todos compartían las mismas.
+            User user = new User(idDe(request.getEmail()), name, request.getEmail(), "", age);
             callback.onSuccess(user);
         }, FAKE_DELAY_MS);
     }
 
-    /** Registro simulado: valida datos y devuelve el usuario creado (con edad). */
+    /**
+     * Registro simulado.
+     * <p>
+     * Devuelve el usuario con los datos del expediente que escribió el paciente; ya
+     * no inventa un teléfono.
+     */
     public void register(AuthRequest request, RepositoryCallback<User> callback) {
         mainHandler.postDelayed(() -> {
             String error = AuthValidator.validateRegister(
@@ -53,10 +61,25 @@ public class AuthRepository implements com.tuempresa.citasmedicas.domain.reposit
                 callback.onError(error);
                 return;
             }
-            User user = new User("user_01", request.getFullName().trim(),
-                    request.getEmail(), FAKE_PHONE, request.getAge());
+            User user = new User(idDe(request.getEmail()),
+                    request.getFullName() != null ? request.getFullName().trim() : "",
+                    request.getLastName(), request.getEmail(),
+                    request.getPhone() != null ? request.getPhone().trim() : "",
+                    request.getAge(), request.getBloodType(), request.getInsurance(),
+                    request.getAllergies());
             callback.onSuccess(user);
         }, FAKE_DELAY_MS);
+    }
+
+    /** Id estable por cuenta, derivado del correo. */
+    @NonNull
+    private String idDe(@Nullable String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return "user_local";
+        }
+        String limpio = email.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "_");
+        return "user_" + limpio;
     }
 
     private String deriveNameFromEmail(String email) {

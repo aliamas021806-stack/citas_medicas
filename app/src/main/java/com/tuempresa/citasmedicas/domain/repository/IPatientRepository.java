@@ -17,4 +17,12 @@ public interface IPatientRepository {
 
     /** Expediente de un paciente concreto. */
     void getPatientById(String patientId, RepositoryCallback<Patient> callback);
+
+    /**
+     * Guarda o actualiza el expediente de un paciente.
+     * <p>
+     * Servicio opcional: las implementaciones que no tengan backend lo dejan pasar sin
+     * hacer nada (el perfil se nutre de la sesión).
+     */
+    void savePatient(Patient patient, RepositoryCallback<Void> callback);
 }

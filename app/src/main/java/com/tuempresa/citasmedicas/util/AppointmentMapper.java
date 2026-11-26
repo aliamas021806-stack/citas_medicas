@@ -32,6 +32,7 @@ public final class AppointmentMapper {
         a.setReason(e.reason);
         a.setCreatedAt(e.createdAt);
         a.setRemoteId(e.remoteId);
+        a.setOwnerId(e.ownerId);
         return a;
     }
 
@@ -55,6 +56,7 @@ public final class AppointmentMapper {
         e.reason = a.getReason();
         e.createdAt = a.getCreatedAt() > 0 ? a.getCreatedAt() : System.currentTimeMillis();
         e.remoteId = a.getRemoteId() != null ? a.getRemoteId() : "";
+        e.ownerId = a.getOwnerId() != null ? a.getOwnerId() : "";
         return e;
     }
 

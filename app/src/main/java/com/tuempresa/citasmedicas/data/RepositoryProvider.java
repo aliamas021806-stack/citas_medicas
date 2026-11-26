@@ -19,6 +19,7 @@ import com.tuempresa.citasmedicas.domain.repository.IAppointmentRepository;
 import com.tuempresa.citasmedicas.domain.repository.IAuthRepository;
 import com.tuempresa.citasmedicas.domain.repository.IDoctorRepository;
 import com.tuempresa.citasmedicas.domain.repository.IPatientRepository;
+import com.tuempresa.citasmedicas.util.SessionManager;
 
 /**
  * Raíz de composición: <b>el único sitio donde se decide qué implementación usa cada
@@ -141,9 +142,49 @@ public final class RepositoryProvider {
      */
     @NonNull
     public static IAppointmentRepository appointments(@NonNull Context context) {
+        String ownerId = SessionManager.getInstance(context).getUserId();
         if (FirebaseConfig.isEnabled()) {
-            return new FirestoreAppointmentRepository(context.getApplicationContext());
+            return new FirestoreAppointmentRepository(context.getApplicationContext(),
+                    ownerId);
         }
-        return new AppointmentRepository(context.getApplicationContext());
+        return new AppointmentRepository(context.getApplicationContext(), ownerId);
+    }
+
+    /**
+     * Copia el expediente del paciente a Firestore (colección {@code patients}).
+     * <p>
+     * El documento se identifica con el id del usuario en Firebase, así cada paciente
+     * tiene un único expediente y volver a entrar no crea duplicados. Es una operación
+     * <i>best-effort</i>: si falla (sin red o sin permisos) el perfil sigue mostrando
+     * los datos de la sesión, así que la pantalla nunca se queda en blanco.
+     */
+    public static void guardarExpediente(@NonNull Context context, @NonNull String userId,
+                                         @NonNull com.tuempresa.citasmedicas.model.User user) {
+        com.tuempresa.citasmedicas.model.Patient p =
+                new com.tuempresa.citasmedicas.model.Patient();
+        p.setId(userId);
+        p.setFullName(user.getFullName());
+        p.setEmail(user.getEmail());
+        p.setPhone(user.getPhone());
+        p.setAge(user.getAge());
+        p.setBloodType(user.getBloodType());
+        p.setInsurance(user.getInsurance());
+        p.setAllergies(user.getAllergies());
+        p.setCreatedAt(System.currentTimeMillis());
+
+        patients(context).savePatient(p, new com.tuempresa.citasmedicas.domain.repository
+                .RepositoryCallback<Void>() {
+            @Override
+            public void onSuccess(Void data) {
+                // Nada que hacer: el perfil ya está pintado desde la sesión.
+            }
+
+            @Override
+            public void onError(String message) {
+                // Best-effort: se registra sin romper la pantalla.
+                android.util.Log.w("RepositoryProvider",
+                        "No se pudo guardar el expediente en Firestore: " + message);
+            }
+        });
     }
 }

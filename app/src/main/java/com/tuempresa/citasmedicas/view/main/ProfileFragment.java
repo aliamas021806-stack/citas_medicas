@@ -13,14 +13,12 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.button.MaterialButton;
 import com.tuempresa.citasmedicas.R;
+import com.tuempresa.citasmedicas.data.RepositoryProvider;
 import com.tuempresa.citasmedicas.model.Appointment;
 import com.tuempresa.citasmedicas.model.AppointmentStatus;
-import com.tuempresa.citasmedicas.model.Patient;
 import com.tuempresa.citasmedicas.model.User;
-import com.tuempresa.citasmedicas.util.Resource;
 import com.tuempresa.citasmedicas.util.SessionManager;
 import com.tuempresa.citasmedicas.viewmodel.AppointmentViewModel;
-import com.tuempresa.citasmedicas.viewmodel.PatientViewModel;
 
 import java.util.List;
 
@@ -31,7 +29,6 @@ import java.util.List;
 public class ProfileFragment extends Fragment {
 
     private AppointmentViewModel appointmentViewModel;
-    private PatientViewModel patientViewModel;
     private User currentUser;
 
     private TextView tvAvatar, tvName, tvEmail, tvAge, tvUpcoming, tvTotal, tvDataSource;
@@ -92,41 +89,65 @@ public class ProfileFragment extends Fragment {
         appointmentViewModel = new ViewModelProvider(this).get(AppointmentViewModel.class);
         appointmentViewModel.getAppointments().observe(getViewLifecycleOwner(), this::updateStats);
 
-        // Información del paciente desde la API mock (datos generados por IA)
-        patientViewModel = new ViewModelProvider(this).get(PatientViewModel.class);
-        patientViewModel.getPatient().observe(getViewLifecycleOwner(), this::renderPatient);
-        patientViewModel.loadPatient("pat_01");
+        // El expediente se pinta con los datos del usuario en sesión. Antes se pedía
+        // siempre el paciente "pat_01" (Laura Jiménez) del mock, así que el perfil
+        // mostraba la información de otra persona.
+        renderPatientFromSession();
+        sincronizarExpedienteConFirestore();
     }
 
-    private void renderPatient(Resource<Patient> resource) {
-        if (resource == null) {
+    /**
+     * Pinta el expediente a partir de la sesión.
+     * <p>
+     * Es la fuente de verdad para el perfil: son exactamente los datos que el
+     * paciente escribió al registrarse.
+     */
+    private void renderPatientFromSession() {
+        if (currentUser == null) {
             return;
         }
-        switch (resource.status) {
-            case LOADING:
-                tvInfoLoading.setVisibility(View.VISIBLE);
-                break;
-            case SUCCESS:
-                tvInfoLoading.setVisibility(View.GONE);
-                Patient p = resource.data;
-                if (p != null) {
-                    // La edad registrada en la sesión manda; la de la API es respaldo.
-                    int age = (currentUser != null && currentUser.getAge() > 0)
-                            ? currentUser.getAge() : p.getAge();
-                    tvInfoAge.setText(getResources().getQuantityString(
-                            R.plurals.years, age, age));
-                    tvInfoPhone.setText(safe(p.getPhone()));
-                    tvInfoBlood.setText(safe(p.getBloodType()));
-                    tvInfoInsurance.setText(safe(p.getInsurance()));
-                    tvInfoAllergies.setText(safe(p.getAllergies()));
-                }
-                break;
-            case ERROR:
-                tvInfoLoading.setText(resource.message != null
-                        ? resource.message : getString(R.string.loading_error));
-                tvInfoLoading.setVisibility(View.VISIBLE);
-                break;
+        if (tvInfoLoading != null) {
+            tvInfoLoading.setVisibility(View.GONE);
         }
+        int age = currentUser.getAge() > 0 ? currentUser.getAge() : 0;
+        if (tvInfoAge != null) {
+            tvInfoAge.setText(age > 0
+                    ? getResources().getQuantityString(R.plurals.years, age, age)
+                    : getString(R.string.value_placeholder));
+        }
+        if (tvInfoPhone != null) {
+            tvInfoPhone.setText(safe(currentUser.getPhone()));
+        }
+        if (tvInfoBlood != null) {
+            tvInfoBlood.setText(safe(currentUser.getBloodType()));
+        }
+        if (tvInfoInsurance != null) {
+            tvInfoInsurance.setText(safe(currentUser.getInsurance()));
+        }
+        if (tvInfoAllergies != null) {
+            tvInfoAllergies.setText(safe(currentUser.getAllergies()));
+        }
+    }
+
+    /**
+     * Copia el expediente a Firestore (colección {@code patients}) para que quede
+     * también en la nube.
+     * <p>
+     * Es <i>best-effort</i>: el perfil ya se ha pintado desde la sesión, así que un
+     * fallo de red no deja la pantalla en blanco. El documento usa como id el id de
+     * Firebase del usuario, de modo que cada paciente tiene un único expediente y
+     * volver a iniciar sesión no crea duplicados.
+     */
+    private void sincronizarExpedienteConFirestore() {
+        if (currentUser == null) {
+            return;
+        }
+        String userId = currentUser.getId();
+        if (userId == null || userId.trim().isEmpty()) {
+            return;
+        }
+        RepositoryProvider.guardarExpediente(requireContext().getApplicationContext(),
+                userId, currentUser);
     }
 
     private String safe(String s) {
@@ -152,6 +173,9 @@ public class ProfileFragment extends Fragment {
 
     private void logout() {
         SessionManager.getInstance(requireContext()).logout();
+        // Se cierra la base local para que el siguiente usuario que entre abra una
+        // instancia limpia y no pueda ver en memoria las citas del anterior.
+        com.tuempresa.citasmedicas.data.local.AppDatabase.reset();
         if (getActivity() instanceof MainActivity) {
             ((MainActivity) getActivity()).goToLogin();
         }

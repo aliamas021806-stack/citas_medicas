@@ -28,6 +28,14 @@ public class Appointment implements Serializable {
      */
     private String remoteId;
 
+    /**
+     * Id del paciente dueño de la cita.
+     * <p>
+     * Permite que cada usuario vea sólo sus citas. La UI no lo pinta; el repositorio
+     * lo usa para filtrar y para etiquetar el documento en Firestore.
+     */
+    private String ownerId;
+
     public Appointment() {
     }
 
@@ -75,6 +83,9 @@ public class Appointment implements Serializable {
 
     public String getRemoteId() { return remoteId; }
     public void setRemoteId(String remoteId) { this.remoteId = remoteId; }
+
+    public String getOwnerId() { return ownerId; }
+    public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
 
     public boolean isCancellable() {
         return status == AppointmentStatus.CONFIRMED || status == AppointmentStatus.PENDING;

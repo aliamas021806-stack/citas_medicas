@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Transformations;
@@ -16,6 +17,7 @@ import com.tuempresa.citasmedicas.domain.repository.IAppointmentRepository;
 import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.model.Appointment;
 import com.tuempresa.citasmedicas.util.AppointmentMapper;
+import com.tuempresa.citasmedicas.util.SessionManager;
 
 import java.util.List;
 
@@ -49,6 +51,13 @@ public class AppointmentRepository implements IAppointmentRepository {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     /**
+     * Id del paciente en sesión. Es la clave de filtrado: cada usuario ve sólo sus
+     * citas. Si es {@code null} o vacío no se muestra ninguna (antes se mostraban
+     * todas, incluidas las del sembrado de ejemplo a nombre de otra persona).
+     */
+    private final String ownerId;
+
+    /**
      * Flujo observable ya mapeado a modelos.
      * <p>
      * {@link Transformations#map} es la forma idiomática de aplicar una función al
@@ -57,9 +66,25 @@ public class AppointmentRepository implements IAppointmentRepository {
      */
     private final LiveData<List<Appointment>> appointments;
 
-    public AppointmentRepository(@NonNull Context context) {
+    /**
+     * Constructor con dueño: es el que usa la app.
+     *
+     * @param ownerId id del paciente en sesión ({@code null} = sin sesión)
+     */
+    public AppointmentRepository(@NonNull Context context, @Nullable String ownerId) {
         this.dao = AppDatabase.getInstance(context).appointmentDao();
-        this.appointments = Transformations.map(dao.observeAll(), AppointmentMapper::toModelList);
+        this.ownerId = ownerId != null ? ownerId : "";
+        this.appointments = Transformations.map(
+                dao.observeByOwner(this.ownerId), AppointmentMapper::toModelList);
+    }
+
+    /**
+     * Sin dueño explícito: se resuelve el usuario de la sesión.
+     * <p>
+     * Se conserva para no romper las llamadas anteriores (y las pruebas).
+     */
+    public AppointmentRepository(@NonNull Context context) {
+        this(context, SessionManager.getInstance(context).getUserId());
     }
 
     @NonNull
@@ -68,14 +93,28 @@ public class AppointmentRepository implements IAppointmentRepository {
         return appointments;
     }
 
+    /** Dueño con el que se filtran las citas de esta instancia. */
+    @NonNull
+    public String getOwnerId() {
+        return ownerId;
+    }
+
     @Override
     public void create(@NonNull Appointment appointment,
                        @NonNull final RepositoryCallback<String> callback) {
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
+                // La cita pertenece al usuario en sesión, siempre.
+                if (ownerId.isEmpty()) {
+                    mainHandler.post(() -> callback.onError(
+                            "No hay una sesión activa: inicia sesión para agendar"));
+                    return;
+                }
+                appointment.setOwnerId(ownerId);
                 AppointmentEntity entity = AppointmentMapper.toEntity(appointment);
                 // El id lo asigna SQLite; se fuerza 0 para no reutilizar uno ajeno.
                 entity.id = 0;
+                entity.ownerId = ownerId;
                 final long newId = dao.insert(entity);
                 mainHandler.post(() -> callback.onSuccess(String.valueOf(newId)));
             } catch (RuntimeException e) {
@@ -97,6 +136,13 @@ public class AppointmentRepository implements IAppointmentRepository {
         }
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
+                AppointmentEntity cita = dao.getById(id);
+                // Sólo el dueño puede cancelar su cita.
+                if (cita == null || !ownerId.equals(cita.ownerId)) {
+                    mainHandler.post(() ->
+                            callback.onError("Esa cita no pertenece a tu cuenta"));
+                    return;
+                }
                 dao.updateStatus(id, "Cancelled");
                 mainHandler.post(() -> callback.onSuccess(null));
             } catch (RuntimeException e) {
@@ -112,7 +158,13 @@ public class AppointmentRepository implements IAppointmentRepository {
         final AppointmentEntity entity = AppointmentMapper.toEntity(appointment);
         AppDatabase.databaseWriteExecutor.execute(() -> {
             try {
-                dao.delete(entity);
+                AppointmentEntity actual = dao.getById(entity.id);
+                if (actual == null || !ownerId.equals(actual.ownerId)) {
+                    mainHandler.post(() ->
+                            callback.onError("Esa cita no pertenece a tu cuenta"));
+                    return;
+                }
+                dao.delete(actual);
                 mainHandler.post(() -> callback.onSuccess(null));
             } catch (RuntimeException e) {
                 mainHandler.post(() -> callback.onError("No se pudo eliminar la cita"));

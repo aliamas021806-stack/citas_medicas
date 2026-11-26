@@ -29,4 +29,13 @@ public class PatientRepository implements com.tuempresa.citasmedicas.domain.repo
     public void getPatientById(String patientId, RepositoryCallback<Patient> callback) {
         RemoteCall.single(api.getPatientById(patientId), DtoMapper::toModel, callback);
     }
+
+    /**
+     * Sin backend persistente: el expediente vive en la sesión del dispositivo, así
+     * que aquí no hay nada que guardar y se responde con éxito.
+     */
+    @Override
+    public void savePatient(Patient patient, RepositoryCallback<Void> callback) {
+        callback.onSuccess(null);
+    }
 }

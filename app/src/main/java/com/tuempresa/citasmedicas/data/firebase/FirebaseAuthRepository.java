@@ -208,7 +208,12 @@ public class FirebaseAuthRepository implements IAuthRepository {
         // Firebase identifica al usuario con localId: se usa como id de sesión.
         String id = response.localId != null && !response.localId.isEmpty()
                 ? response.localId : "user_01";
-        return new User(id, name, email, "", age);
+        // El expediente viaja en la petición: antes se perdía aquí y el perfil acababa
+        // mostrando los datos aleatorios del paciente del mock.
+        User user = new User(id, name, request.getLastName(), email,
+                request.getPhone() != null ? request.getPhone() : "", age,
+                request.getBloodType(), request.getInsurance(), request.getAllergies());
+        return user;
     }
 
     /** Deriva "Ana Pérez" a partir de "ana.perez@correo.com". */

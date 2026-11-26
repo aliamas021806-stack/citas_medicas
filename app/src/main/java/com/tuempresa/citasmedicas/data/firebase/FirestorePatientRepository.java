@@ -8,6 +8,7 @@ import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
 import com.tuempresa.citasmedicas.model.Patient;
 
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Response;
@@ -103,12 +104,105 @@ public class FirestorePatientRepository implements IPatientRepository {
     }
 
     /**
-     * Mensaje de error con el motivo real de Google.
+     * Guarda el expediente en Firestore.
      * <p>
-     * Se lee {@code errorBody()} porque en un HTTP 4xx Retrofit deja {@code body()}
-     * a {@code null}: sin eso se perdía el detalle ("database does not exist",
-     * "insufficient permissions") y sólo se mostraba el número.
+     * Usa {@code PATCH} con {@code updateMask.fieldPaths} para no perder campos: sin
+     * la máscara, Firestore <b>reemplaza</b> el documento completo y borraría los
+     * campos que no se envían.
+     * <p>
+     * Estrategia: primero se intenta actualizar (el caso normal, el paciente ya
+     * existe); si responde 404 se crea.
      */
+    @Override
+    public void savePatient(@NonNull final Patient patient,
+                            @NonNull final RepositoryCallback<Void> callback) {
+        if (patient == null || patient.getId() == null || patient.getId().trim().isEmpty()) {
+            callback.onError("El expediente no tiene identificador de paciente");
+            return;
+        }
+        final String id = patient.getId().trim();
+        final Map<String, FirestoreApi.Value> campos = aCampos(patient);
+
+        api.updateDocument(FirebaseConfig.COLLECTION_PATIENTS, id,
+                        new java.util.ArrayList<>(campos.keySet()), documentoCon(campos))
+                .enqueue(new retrofit2.Callback<FirestoreApi.FirestoreDocument>() {
+                    @Override
+                    public void onResponse(
+                            @NonNull Call<FirestoreApi.FirestoreDocument> call,
+                            @NonNull Response<FirestoreApi.FirestoreDocument> response) {
+                        if (response.isSuccessful()) {
+                            callback.onSuccess(null);
+                        } else if (response.code() == 404) {
+                            crear(id, campos, callback);
+                        } else {
+                            callback.onError(mensajeDeError(response.code(),
+                                    FirebaseErrors.cuerpoDeError(response)));
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<FirestoreApi.FirestoreDocument> call,
+                                          @NonNull Throwable t) {
+                        callback.onError(mensajeDeRed(t));
+                    }
+                });
+    }
+
+    /** Crea el documento del expediente cuando aún no existía. */
+    private void crear(@NonNull String id,
+                       @NonNull Map<String, FirestoreApi.Value> campos,
+                       @NonNull final RepositoryCallback<Void> callback) {
+        api.createDocument(FirebaseConfig.COLLECTION_PATIENTS + "/" + id,
+                        documentoCon(campos))
+                .enqueue(new retrofit2.Callback<FirestoreApi.FirestoreDocument>() {
+                    @Override
+                    public void onResponse(
+                            @NonNull Call<FirestoreApi.FirestoreDocument> call,
+                            @NonNull Response<FirestoreApi.FirestoreDocument> response) {
+                        if (response.isSuccessful()) {
+                            callback.onSuccess(null);
+                        } else {
+                            callback.onError(mensajeDeError(response.code(),
+                                    FirebaseErrors.cuerpoDeError(response)));
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<FirestoreApi.FirestoreDocument> call,
+                                          @NonNull Throwable t) {
+                        callback.onError(mensajeDeRed(t));
+                    }
+                });
+    }
+
+    /** Envuelve los campos en el documento que espera la API REST. */
+    @NonNull
+    private FirestoreApi.FirestoreDocument documentoCon(
+            @NonNull Map<String, FirestoreApi.Value> campos) {
+        FirestoreApi.FirestoreDocument doc = new FirestoreApi.FirestoreDocument();
+        doc.fields = campos;
+        return doc;
+    }
+
+    /**
+     * Convierte el expediente al formato de campos de Firestore.
+     * <p>
+     * Se usa el mismo nombre de campo que ya existe en la colección {@code patients}
+     * para no romper los documentos anteriores.
+     */
+    @NonNull
+    public static Map<String, FirestoreApi.Value> aCampos(@NonNull Patient p) {
+        Map<String, FirestoreApi.Value> f = new java.util.HashMap<>();
+        f.put("fullName", FirestoreApi.ofString(p.getFullName()));
+        f.put("email", FirestoreApi.ofString(p.getEmail()));
+        f.put("phone", FirestoreApi.ofString(p.getPhone()));
+        f.put("age", FirestoreApi.ofInteger(p.getAge()));
+        f.put("bloodType", FirestoreApi.ofString(p.getBloodType()));
+        f.put("insurance", FirestoreApi.ofString(p.getInsurance()));
+        f.put("allergies", FirestoreApi.ofString(p.getAllergies()));
+        return f;
+    }
+
     @NonNull
     private String mensajeDeError(int httpCode, @Nullable String jsonError) {
         String detalle = FirebaseErrors.describirErrorFirestore(httpCode, jsonError);
