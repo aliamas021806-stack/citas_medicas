@@ -19,6 +19,11 @@ necesidad de Android Studio, sin emulador y sin conocimientos técnicos.
 - Requisito: **Android 7.0 o superior** (API 24+)
 - Firmado con certificado de release ✅
 
+> 🆕 **Esta es la v6.0 e incluye el portal del médico y el alta de médicos.** Para
+> confirmarlo dentro de la app: si eres **administrador** verás la pestaña
+> **«Médicos»**; si eres **médico**, **«Mi Agenda»**. Un paciente ve
+> Doctores · Mis Citas · Perfil.
+
 > ⚠️ **La v3.0 está obsoleta.** Es anterior a la integración de Firebase: no
 > sincroniza las citas con la base de datos. Descarga siempre la **v6.0**.
 
@@ -114,6 +119,10 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
   Si dice **«Datos de prueba (sin base de datos)»**, tienes instalada una versión
   antigua (v3.0 o anterior): desinstálala e instala la **v6.0**.
 - Los contadores muestran **citas próximas** y **total**.
+- 🆕 **Y confirma el rol**: si eres **administrador** debe aparecer la pestaña
+  **«Médicos»** en la barra inferior; si eres **médico**, **«Mi Agenda»**.
+  Si acabas de crear tu documento en `/users/{uid}` con `role: "admin"`, **cierra
+  sesión y vuelve a entrar**: el rol se lee al iniciar sesión.
 
 ### 5. Persistencia (punto importante)
 - Cierra la app por completo y vuelve a abrirla: **la sesión y las citas se conservan**.
@@ -139,8 +148,9 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 | **Keystore incluida** | El repositorio incluye la keystore de demostración para que CI pueda firmar el APK sin secretos. En producción nunca se subiría. |
 
 > ✅ **Siguiente paso (ya hecho):** la base de datos real con
-> **Firebase / Firestore** está integrada desde la v4.0. Para conectarla a tu propio
-> proyecto, sigue **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**.
+> **Firebase / Firestore** está integrada desde la v4.0, y el **portal del médico**
+> desde la v6.0. Para conectarla a tu propio proyecto, sigue
+> **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**.
 
 ---
 
@@ -148,7 +158,7 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 
 Si quieres comprobar que el archivo descargado es exactamente el que generó la CI:
 
-**SHA-256** (versión 5.0, APK publicado en la release `v6.0`):
+**SHA-256** (APK de la release `v6.0`):
 
 ```
 89350892697aaefd9d3d59bb8fdfba8d7e92f6f843a9d4264747e2742079c763
@@ -211,8 +221,9 @@ SHA-256: 3df1af33ce2aae8a300723a6509db9f061df334bad97d8a2e6ae485eff7ec5b4
 ./gradlew testDebugUnitTest
 ```
 
-**158 pruebas automatizadas · 0 fallos.** Incluyen pruebas que abren todas las
-pantallas y recorren el flujo completo (login → agendar → ver cita → cancelar).
+**273 pruebas automatizadas · 0 fallos.** Incluyen pruebas que abren todas las
+pantallas y recorren el flujo completo (login → agendar → ver cita → cancelar), las de
+la capa Firebase por REST y las del **portal del médico** (31 en `PortalMedicoTest`).
 
 ### Compilar el APK desde cero
 

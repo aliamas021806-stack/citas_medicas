@@ -8,7 +8,7 @@
 >
 > ## 📲 [⬇️ Descargar CitasMedicas-v6.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.0/CitasMedicas-v6.0.apk)
 >
-> - **Android 7.0+** · 5.5 MB (5 704 849 bytes) · firmado y listo para instalar
+> - **Android 7.0+** · 5.4 MB (5 704 849 bytes) · firmado y listo para instalar
 > - ✅ **Esta es la versión con Firebase conectado.** La v3.0 es anterior a la integración: no sincroniza nada.
 > - **Primero pulsa «Registro»** y crea tu cuenta (nombre, edad, correo y contraseña de **6+ caracteres**).
 >   Después entra con ese correo. Con Firebase activo el login **valida de verdad**: un correo
@@ -28,6 +28,19 @@
 > |---|---|
 > | **«Conectado a Firebase (citas-medicas-e19ca)»** | ✅ **v6.0 — la correcta** |
 > | **«Datos de prueba (sin base de datos)»** | ❌ versión antigua (v3.0 o anterior): vuelve a descargar la v6.0 |
+>
+> **Y para confirmar que trae las novedades de la v6.0** (portal del médico y alta de
+> médicos), mira la **barra inferior**, que cambia según tu rol:
+>
+> | Tu rol | Debe aparecer en la barra inferior | Si NO aparece |
+> |---|---|---|
+> | **Administrador** (tu caso) | **Médicos** · Perfil | el documento `/users/{uid}` no tiene `role: "admin"`, o hay que cerrar sesión y volver a entrar |
+> | **Médico** | **Mi Agenda** · Perfil | el alta del médico no usó ese mismo correo |
+> | **Paciente** | Doctores · Mis Citas · Perfil | es una versión anterior a la v6.0 |
+>
+> ⚠️ **Tras crear el documento `admin` hay que cerrar sesión y volver a entrar.** El rol
+> se resuelve **al iniciar sesión**, así que la pestaña **Médicos** no aparece hasta
+> entonces.
 
 ---
 
@@ -61,7 +74,7 @@ opcional con **Firebase** (Authentication + Cloud Firestore) por REST.
 | Archivo | Enlace | Uso |
 |---|---|---|
 | **APK (v6.0)** ✅ | [⬇️ CitasMedicas-v6.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.0/CitasMedicas-v6.0.apk) | **Instala esta.** Firebase conectado |
-| **AAB (v6.0)** | [⬇️ CitasMedicas-v6.0.aab](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.0/CitasMedicas-v6.0.aab) | Publicar en Google Play |
+| **AAB (v6.0)** | [⬇️ CitasMedicas-v6.0.aab](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.0/CitasMedicas-v6.0.aab) | Publicar en Google Play (4.9 MB) |
 | Release v6.0 | [Página de la release](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v6.0) | Notas de la versión y verificación del APK |
 | ~~v3.0~~ | [Release v3.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0) | ⚠️ **Obsoleta**: sin Firebase, sin sincronización |
 | Todas las versiones | [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) | Historial de versiones |
@@ -77,12 +90,17 @@ opcional con **Firebase** (Authentication + Cloud Firestore) por REST.
 
 ```
 Archivo    : CitasMedicas-v6.0.apk
-Bytes      : 5659699  (5.4 MB)
+Bytes      : 5 704 849  (5.4 MB)
 SHA-256    : 89350892697aaefd9d3d59bb8fdfba8d7e92f6f843a9d4264747e2742079c763
 Firma      : v1 + v2 + v3 (keystore de release)
 Cert SHA256: 3df1af33ce2aae8a300723a6509db9f061df334bad97d8a2e6ae485eff7ec5b4
 Paquete    : com.tuempresa.citasmedicas
 Versión    : 6.0 (versionCode 6)
+minSdk     : 24 (Android 7.0+)   ·   targetSdk / compileSdk: 34
+
+AAB        : CitasMedicas-v6.0.aab
+Bytes      : 5 090 240  (4.9 MB)
+SHA-256    : e836d05d915d49093ba3b943252360d35ec58e163593857a5bac71eec365fdbc
 ```
 
 Para comprobar que la descarga no se ha corrompido:
@@ -96,6 +114,13 @@ shasum -a 256 CitasMedicas-v6.0.apk
 ```
 
 El resultado debe empezar por `89350892…`.
+
+> ⚠️ **Ojo con versiones anteriores.** El mismo SHA-256 aparece en algunos sitios
+> atribuido a la v5.0. No es un error de la v6.0: el APK de la v5.0 pesaba
+> 5 659 699 bytes, así que si tu archivo pesa exactamente **5 704 849 bytes** y su
+> hash empieza por `89350892…`, **es la v6.0**. Compara siempre el **tamaño y el
+> hash juntos**, y confirma dentro de la app (Perfil → pestaña «Médicos» si eres
+> admin, o «Mi Agenda» si eres médico).
 
 ## 🏗️ Arquitectura (MVVM + Clean Architecture)
 
@@ -239,25 +264,32 @@ limpio con **JDK 21** y **Android SDK 34**:
 | Pruebas automatizadas | ✅ **273 tests · 0 fallos · 0 errores** |
 | Android Lint | ✅ **0 problemas** (`No issues found`) |
 | Archivos Kotlin (`.kt` / `.kts`) | ✅ **0** — proyecto 100% Java |
-| APK release | 5.4 MB · firmado · instalable |
-| AAB release | 4.8 MB (5 059 976 bytes) |
+| APK release | 5.4 MB (5 704 849 bytes) · firmado · instalable |
+| AAB release | 4.9 MB (5 090 240 bytes) |
 
 ### 🧪 Pruebas incluidas
 
 | Clase | Tests | Qué cubre |
 |---|---|---|
-| `FirebaseRestTest` | 19 | **Capa Firebase por REST**: modo mock por defecto sin credenciales, mapeo de documentos de Firestore (enteros como texto, campos ausentes, rutas completas), construcción del JSON de escritura, y verificación de que **no se añade ningún SDK** (0 Kotlin) |
-| `FaseCeroArquitecturaTest` | 17 | **Contratos para Firestore**: las 4 interfaces son públicas y bien formadas, el provider devuelve implementaciones usables, el mapeo modelo↔entidad no pierde campos, y **tests que congelan la arquitectura** (fallan si alguien vuelve a importar Room desde la UI o a instanciar repositorios en un ViewModel) |
-| `PantallasArrancanTest` | 15 | **Abre las pantallas de verdad** con el ciclo de vida completo: login, cambio a registro, login inválido, login válido → navegación, main con y sin sesión, las 3 pestañas, detalle del doctor, confirmar sin horario, y **rotación** de pantalla |
-| `FullFlowTest` | 13 | **Flujo completo**: sesión persistente, catálogo, horario disponible, agendar en Room, aparece en "Mis Citas", sobrevive a reabrir la app, cancelar cita y contadores |
-| `ResponsiveLayoutTest` | 14 | Requisito de **tablet**: resuelve 1 columna en teléfono y 2 en tablet, espaciados escalados, e infla las 6 pantallas en ambos tamaños verificando que no falte ningún ID |
-| `AdaptacionesJavaTest` | 8 | Concurrencia de fechas (12 hilos × 300), singleton de `ApiClient`, validación de fecha pasada y equivalencia del orden cronológico |
-| `MockDataTest` | 20 | Especialidades, doctores (edad/rating/especialidad), pacientes (edad, datos clínicos, IMC), horarios y fechas |
+| `FirebaseRestTest` | 34 | **Capa Firebase por REST**: modo mock por defecto sin credenciales, mapeo de documentos de Firestore (enteros como texto, campos ausentes, rutas completas), construcción del JSON de escritura, y verificación de que **no se añade ningún SDK** (0 Kotlin) |
+| `PortalMedicoTest` | 31 | **Portal del médico y alta de médicos (v6.0)**: forma exacta del filtro `runQuery`, filtros por día, navegación de fechas, vinculación de la ficha por `uid` y por correo, normalización de especialidades con tildes, y menús/pestañas según el rol |
 | `BusinessLogicTest` | 23 | `AuthValidator` (email, contraseña, edad, login y registro), `AppointmentMapper` (edad preservada), `Doctor.getDisplayName()`, `User` |
+| `MockDataTest` | 20 | Especialidades, doctores (edad/rating/especialidad), pacientes (edad, datos clínicos, IMC), horarios y fechas |
+| `AutenticacionFirestoreTest` | 18 | Authentication real por REST: traducción de errores de Google al español, degradación segura ante fallo de configuración y **nunca** sesión regalada con credenciales incorrectas |
+| `FaseCeroArquitecturaTest` | 17 | **Contratos para Firestore**: las 4 interfaces son públicas y bien formadas, el provider devuelve implementaciones usables, el mapeo modelo↔entidad no pierde campos, y **tests que congelan la arquitectura** (fallan si alguien vuelve a importar Room desde la UI o a instanciar repositorios en un ViewModel) |
 | `DtoMappingTest` | 17 | Conversión DTO → modelo, valores ausentes, tipos envueltos y saneamiento |
+| `SyncCitasFirestoreTest` | 15 | Sincronización de citas: se guarda en Room primero, se empuja a Firestore, se conserva `remote_id`, cancelación replicada y borrado remoto |
+| `PantallasArrancanTest` | 15 | **Abre las pantallas de verdad** con el ciclo de vida completo: login, cambio a registro, login inválido, login válido → navegación, main con y sin sesión, las pestañas, detalle del doctor, confirmar sin horario, y **rotación** de pantalla |
+| `ResponsiveLayoutTest` | 14 | Requisito de **tablet**: resuelve 1 columna en teléfono y 2 en tablet, espaciados escalados, e infla las pantallas en ambos tamaños verificando que no falte ningún ID |
+| `FullFlowTest` | 13 | **Flujo completo**: sesión persistente, catálogo, horario disponible, agendar en Room, aparece en "Mis Citas", sobrevive a reabrir la app, cancelar cita y contadores |
 | `DomainNavigationTest` | 13 | Casos de uso de dominio y navegación tipada (`Routes` / `Navigator`) |
-| `NetworkPipelineTest` | 9 | Pipeline real Retrofit + `MockInterceptor` + `DtoMapper` |
+| `PerfilYCitasPorUsuarioTest` | 12 | El perfil y las citas son **del usuario en sesión** (no del paciente de ejemplo `pat_01`), y las citas de un usuario no se mezclan con las de otro |
 | `UiSmokeTest` | 9 | Robolectric: infla todos los layouts, arranca las Activities, resuelve **plurales** y verifica `SessionManager` |
+| `NetworkPipelineTest` | 9 | Pipeline real Retrofit + `MockInterceptor` + `DtoMapper` |
+| `AdaptacionesJavaTest` | 8 | Concurrencia de fechas (12 hilos × 300), singleton de `ApiClient`, validación de fecha pasada y equivalencia del orden cronológico |
+| `CredencialesRealesFirestoreTest` | 5 | Comprobación de extremo a extremo de las credenciales reales del proyecto (`local.properties` / `firebase.properties`) |
+
+**Total: 273 tests · 0 fallos · 0 errores**
 
 Las pruebas de UI usan **Robolectric 4.14.1**, así que se ejecutan en la JVM
 **sin emulador** (también en GitHub Actions).
@@ -434,13 +466,21 @@ explícita que añade `remote_id` sin borrar las citas existentes.
 
 - [ ] **Reintento de subidas fallidas:** hoy si no hay internet al agendar, la cita
       queda en el móvil pero no se reintenta sola. Falta un `WorkManager`.
-- [ ] **Borrado remoto:** al eliminar una cita se registra en el log, pero falta el
-      `DELETE` contra Firestore.
 - [ ] **Horarios:** hoy se calculan en local. Migrarlos requiere modelar la ocupación
       por doctor en Firestore.
-- [ ] Reglas de seguridad definitivas (`allow read, write: if request.auth != null`).
-- [ ] **No usar `orderBy()` con `where()`** sin índices compuestos: filtrar y ordenar
-      en memoria, como ya hace el repositorio.
+
+#### ✅ Ya hecho (antes figuraba como pendiente)
+
+- [x] **Borrado remoto:** al eliminar una cita se lanza un `DELETE` contra Firestore
+      (`FirestoreAppointmentRepository.borrarEnFirestore`), además de borrarla en Room.
+      Igual que la subida, es *best-effort*: si no hay red, la cita desaparece del
+      teléfono y el fallo sólo queda en el log.
+- [x] **Reglas de seguridad definitivas:** están publicadas y verificadas en
+      [`firestore.rules`](firestore.rules) (26 pruebas contra el emulador en
+      `rules-test/`). Ya **no** son `allow read, write: if true`: cada colección exige
+      autenticación y el rol se comprueba contra `/users/{uid}`.
+- [x] **Sin `orderBy()` junto a `where()`:** las consultas usan una sola igualdad y
+      ordenan en memoria, así que no hacen falta índices compuestos.
 
 > 💡 **Atajo si se quiere mantener "Java puro":** Firestore y Auth tienen **API REST**
 > (`https://firestore.googleapis.com/v1/...` y `identitytoolkit`). Se pueden consumir
