@@ -48,6 +48,10 @@ public final class FirestoreMapper {
         d.setYearsExperience((int) number(f, "yearsExperience", 0d));
         d.setAge((int) number(f, "age", 0d));
         d.setConsultationFee(number(f, "consultationFee", 0d));
+        // Vinculación con una cuenta: 'email' es la invitación que escribe el
+        // administrador y 'userId' el uid una vez que el médico entra por primera vez.
+        d.setEmail(text(f, "email", ""));
+        d.setUserId(text(f, "userId", ""));
         return d;
     }
 

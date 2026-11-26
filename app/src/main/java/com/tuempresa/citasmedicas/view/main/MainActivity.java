@@ -12,6 +12,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.tuempresa.citasmedicas.R;
 import com.tuempresa.citasmedicas.navigation.Navigator;
 import com.tuempresa.citasmedicas.navigation.Routes;
+import com.tuempresa.citasmedicas.model.UserRole;
 import com.tuempresa.citasmedicas.util.SessionManager;
 
 /**
@@ -43,10 +44,16 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        // El menú inferior depende del ROL: el paciente ve Doctores / Mis Citas /
+        // Perfil, el médico ve Mi Agenda / Perfil y el administrador ve Médicos /
+        // Perfil. Así un médico no puede llegar a pantallas que no son suyas.
+        UserRole rol = SessionManager.getInstance(this).getRole();
+        bottomNav.getMenu().clear();
+        bottomNav.inflateMenu(Navigator.menuForRole(rol));
         bottomNav.setOnItemSelectedListener(this::onNavItemSelected);
 
         if (savedInstanceState == null) {
-            selectedTab = Routes.Tab.DOCTORS;
+            selectedTab = Navigator.homeTabForRole(rol);
             bottomNav.setSelectedItemId(selectedTab);
         } else {
             // Al rotar, el FragmentManager ya restauró el fragmento, pero NO el
@@ -54,7 +61,8 @@ public class MainActivity extends AppCompatActivity {
             // el BottomNavigationView restaura su propio estado MÁS TARDE que
             // onCreate, así que aquí todavía devolvería la primera pestaña.
             // Por eso la pestaña se guarda y se restaura explícitamente.
-            selectedTab = savedInstanceState.getInt(STATE_SELECTED_TAB, Routes.Tab.DOCTORS);
+            selectedTab = savedInstanceState.getInt(STATE_SELECTED_TAB,
+                    Navigator.homeTabForRole(rol));
             toolbar.setTitle(Navigator.titleForTab(selectedTab));
 
             restoringState = true;

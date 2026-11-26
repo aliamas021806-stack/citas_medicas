@@ -22,6 +22,20 @@ public class User {
     private String insurance;
     private String allergies;
 
+    /**
+     * Rol del usuario: paciente, médico o administrador.
+     * <p>
+     * Nunca es {@code null}: por defecto {@link UserRole#PATIENT}, que es el permiso
+     * mínimo.
+     */
+    private UserRole role = UserRole.PATIENT;
+
+    /**
+     * Si el rol es {@link UserRole#DOCTOR}, id del documento en {@code doctors}
+     * (ej. {@code doc_01}) que identifica su agenda.
+     */
+    private String doctorId;
+
     public User() {
     }
 
@@ -101,6 +115,25 @@ public class User {
     public void setInsurance(String insurance) { this.insurance = insurance; }
     public String getAllergies() { return allergies; }
     public void setAllergies(String allergies) { this.allergies = allergies; }
+
+    /** Rol del usuario. Nunca devuelve {@code null}. */
+    public UserRole getRole() {
+        return role != null ? role : UserRole.PATIENT;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role != null ? role : UserRole.PATIENT;
+    }
+
+    /** Id del documento en {@code doctors} cuando el rol es médico. */
+    public String getDoctorId() { return doctorId; }
+    public void setDoctorId(String doctorId) { this.doctorId = doctorId; }
+
+    /** Atajo: ¿es un médico? */
+    public boolean isDoctor() { return getRole() == UserRole.DOCTOR; }
+
+    /** Atajo: ¿es administrador? */
+    public boolean isAdmin() { return getRole() == UserRole.ADMIN; }
 
     public String getInitials() {
         String completo = getFullName();

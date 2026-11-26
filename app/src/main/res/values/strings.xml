@@ -121,4 +121,55 @@
     <!-- Origen de datos (mock o Firebase) -->
     <string name="data_source_mock">Datos de prueba (sin base de datos)</string>
     <string name="data_source_firebase">Conectado a %1$s</string>
+
+    <!-- ===================== Portal del médico ===================== -->
+    <string name="tab_agenda">Mi Agenda</string>
+    <string name="agenda_title">Mi Agenda</string>
+    <string name="agenda_subtitle">Citas de hoy, en tiempo real desde Firestore</string>
+    <string name="agenda_subtitle_local">Sin conexión: mostrando las citas guardadas en este teléfono</string>
+    <string name="agenda_sin_citas">No tienes citas este día</string>
+    <string name="agenda_sin_citas_hint">Cuando un paciente agende contigo, aparecerá aquí automáticamente</string>
+    <string name="agenda_dia_anterior">&#8592;</string>
+    <string name="agenda_dia_siguiente">&#8594;</string>
+    <string name="agenda_volver_hoy">Volver a hoy</string>
+    <string name="agenda_hoy_fecha">Hoy · %1$s</string>
+    <string name="role_doctor">Médico</string>
+    <string name="role_patient">Paciente</string>
+    <string name="role_admin">Administrador</string>
+    <string name="profile_role_label">Sesión iniciada como %1$s</string>
+
+    <!-- ================= Alta de médicos (solo administrador) ================= -->
+    <string name="tab_admin">Médicos</string>
+    <string name="admin_title">Alta de médicos</string>
+    <string name="admin_subtitle">Registra un médico con su correo y entrará en la app con su propia cuenta</string>
+    <string name="admin_form_title">Nuevo médico</string>
+    <string name="admin_name_hint">Nombre y apellidos</string>
+    <string name="admin_email_hint">Correo del médico</string>
+    <string name="admin_specialty_hint">Especialidad</string>
+    <string name="admin_hospital_hint">Hospital o clínica</string>
+    <string name="admin_fee_hint">Tarifa de consulta</string>
+    <string name="admin_age_hint">Edad</string>
+    <string name="admin_years_hint">Años de experiencia</string>
+    <string name="admin_bio_hint">Reseña profesional (opcional)</string>
+    <string name="admin_guardar">Registrar médico</string>
+    <string name="admin_guardado">Médico registrado. Ya puede entrar con %1$s</string>
+    <string name="admin_lista_title">Médicos registrados</string>
+    <string name="admin_sin_medicos">Todavía no hay médicos registrados</string>
+    <string name="admin_estado_vinculado">Cuenta vinculada</string>
+    <string name="admin_estado_invitado">Esperando que entre con su correo</string>
+    <string name="admin_solo_admin">Esta sección es sólo para administradores</string>
+    <string name="admin_error_nombre">Escribe el nombre del médico</string>
+    <string name="admin_error_email">Escribe un correo válido</string>
+    <string name="admin_error_especialidad">Escribe la especialidad</string>
+    <string name="admin_error_tarifa">La tarifa debe ser un número</string>
+    <string name="admin_requiere_firebase">El alta de médicos necesita Firebase configurado y conexión. En modo sin conexión la lista de médicos viene de los datos de prueba y no se puede ampliar.</string>
+
+    <plurals name="agenda_resumen">
+        <item quantity="one">%1$d cita activa de %2$d en total</item>
+        <item quantity="other">%1$d citas activas de %2$d en total</item>
+    </plurals>
+    <plurals name="ya_vinculados">
+        <item quantity="one">%1$d médico registrado</item>
+        <item quantity="other">%1$d médicos registrados</item>
+    </plurals>
 </resources>

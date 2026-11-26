@@ -2,6 +2,8 @@ package com.tuempresa.citasmedicas.model;
 
 import java.io.Serializable;
 
+import androidx.annotation.Nullable;
+
 /**
  * Doctor / profesional de la salud.
  * Incluye la EDAD del doctor (campo expuesto por la API mock).
@@ -19,6 +21,23 @@ public class Doctor implements Serializable {
     private double consultationFee;
     private String hospital;
     private String photoUrl;
+
+    /**
+     * Correo profesional del médico.
+     * <p>
+     * Es la <b>invitación</b>: cuando un administrador da de alta al médico desde la
+     * app indica su correo, y la primera cuenta que inicie sesión con ese correo queda
+     * vinculada a esta ficha (recibe el rol de médico y su agenda).
+     */
+    private String email;
+
+    /**
+     * uid de Firebase del médico ya vinculado.
+     * <p>
+     * Si está relleno, la vinculación es <b>fuerte</b>: sólo esa cuenta es el médico.
+     * Si está vacío, la ficha está "invitada pero sin reclamar" y se vincula por email.
+     */
+    private String userId;
 
     public Doctor() {
     }
@@ -64,6 +83,39 @@ public class Doctor implements Serializable {
     public void setHospital(String hospital) { this.hospital = hospital; }
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+
+    /** Correo del médico: la invitación que usa el alta desde la app. */
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    /** uid de Firebase una vez vinculado (vacío si la invitación sigue pendiente). */
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
+
+    /** ¿La ficha ya está vinculada a una cuenta concreta? */
+    public boolean isLinked() {
+        return userId != null && !userId.trim().isEmpty();
+    }
+
+    /**
+     * ¿Esta cuenta es la del médico?
+     * <p>
+     * Se comprueba primero el {@code uid} (vinculación fuerte) y después el correo
+     * (invitación pendiente). El correo se compara sin distinguir mayúsculas ni
+     * espacios: es lo que teclea el usuario, no un identificador técnico.
+     */
+    public boolean matchesAccount(@Nullable String uid, @Nullable String accountEmail) {
+        if (isLinked()) {
+            return userId.trim().equals(uid != null ? uid.trim() : "");
+        }
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        if (accountEmail == null || accountEmail.trim().isEmpty()) {
+            return false;
+        }
+        return email.trim().equalsIgnoreCase(accountEmail.trim());
+    }
 
     /** Prefijo del título profesional (Dr./Dra.) según el nombre. */
     public String getDisplayName() {

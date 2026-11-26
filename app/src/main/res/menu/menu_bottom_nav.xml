@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Menú del PACIENTE: buscar doctores, ver sus citas y su perfil.
+  El del médico y el del administrador son otros archivos (menu_bottom_nav_doctor.xml
+  y menu_bottom_nav_admin.xml) y se instalan en tiempo de ejecución según el rol.
+-->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/nav_doctors" android:icon="@android:drawable/ic_menu_search" android:title="@string/tab_doctors" />
     <item android:id="@+id/nav_appointments" android:icon="@android:drawable/ic_menu_agenda" android:title="@string/tab_appointments" />

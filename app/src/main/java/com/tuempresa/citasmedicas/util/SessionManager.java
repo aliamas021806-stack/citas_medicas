@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.tuempresa.citasmedicas.model.User;
+import com.tuempresa.citasmedicas.model.UserRole;
 
 /**
  * Gestiona la sesión del usuario y su <b>expediente</b> persistidos con
@@ -26,6 +27,8 @@ public class SessionManager {
     private static final String KEY_BLOOD = "user_blood_type";
     private static final String KEY_INSURANCE = "user_insurance";
     private static final String KEY_ALLERGIES = "user_allergies";
+    private static final String KEY_ROLE = "user_role";
+    private static final String KEY_DOCTOR_ID = "user_doctor_id";
 
     private final SharedPreferences prefs;
     private static SessionManager instance;
@@ -54,7 +57,33 @@ public class SessionManager {
                 .putString(KEY_BLOOD, user.getBloodType())
                 .putString(KEY_INSURANCE, user.getInsurance())
                 .putString(KEY_ALLERGIES, user.getAllergies())
+                .putString(KEY_ROLE, user.getRole().getValue())
+                .putString(KEY_DOCTOR_ID, user.getDoctorId())
                 .apply();
+    }
+
+    /**
+     * Guarda el rol del usuario cuando llega desde Firestore.
+     * <p>
+     * Se usa al iniciar sesión: el rol del servidor es el que manda, así que si un
+     * administrador asciende a alguien, la app lo refleja en el siguiente acceso sin
+     * necesidad de reinstalar.
+     */
+    public void updateRole(UserRole role, String doctorId) {
+        prefs.edit()
+                .putString(KEY_ROLE, (role != null ? role : UserRole.PATIENT).getValue())
+                .putString(KEY_DOCTOR_ID, doctorId)
+                .apply();
+    }
+
+    /** Rol del usuario en sesión. Sin sesión o sin dato, {@link UserRole#PATIENT}. */
+    public UserRole getRole() {
+        return UserRole.fromValue(prefs.getString(KEY_ROLE, UserRole.PATIENT.getValue()));
+    }
+
+    /** Id del médico vinculado a esta cuenta (vacío si no lo es). */
+    public String getDoctorId() {
+        return prefs.getString(KEY_DOCTOR_ID, "");
     }
 
     /**
@@ -102,6 +131,8 @@ public class SessionManager {
         user.setBloodType(prefs.getString(KEY_BLOOD, ""));
         user.setInsurance(prefs.getString(KEY_INSURANCE, ""));
         user.setAllergies(prefs.getString(KEY_ALLERGIES, ""));
+        user.setRole(UserRole.fromValue(prefs.getString(KEY_ROLE, UserRole.PATIENT.getValue())));
+        user.setDoctorId(prefs.getString(KEY_DOCTOR_ID, ""));
         return user;
     }
 

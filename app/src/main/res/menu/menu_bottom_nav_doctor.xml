@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Menú del MÉDICO: su agenda del día y su perfil.
+  No incluye "Doctores" ni "Mis Citas": esas pantallas son del paciente y para un
+  médico no significan nada (no reserva citas consigo mismo).
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nav_agenda" android:icon="@android:drawable/ic_menu_agenda" android:title="@string/tab_agenda" />
+    <item android:id="@+id/nav_profile" android:icon="@android:drawable/ic_menu_myplaces" android:title="@string/tab_profile" />
+</menu>

@@ -1,0 +1,227 @@
+package com.tuempresa.citasmedicas.view.doctor;
+
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
+import com.google.android.material.button.MaterialButton;
+import com.tuempresa.citasmedicas.R;
+import com.tuempresa.citasmedicas.model.Appointment;
+import com.tuempresa.citasmedicas.model.AppointmentStatus;
+import com.tuempresa.citasmedicas.util.Resource;
+import com.tuempresa.citasmedicas.viewmodel.DoctorAgendaViewModel;
+
+import java.util.List;
+
+/**
+ * Pantalla del médico: <b>las citas que le tocan en el día</b>.
+ * <p>
+ * Se carga desde Firestore filtrada por su {@code doctorId}, así que aparecen las
+ * citas que agendaron los pacientes desde <i>cualquier</i> teléfono, no sólo las que
+ * existen en el móvil del consultorio. Con el selector de día se puede repasar la
+ * agenda de ayer o de mañana sin pedir otra consulta: todas las citas del médico se
+ * traen una vez y el filtro por fecha se hace en memoria.
+ */
+public class AgendaDoctorFragment extends Fragment {
+
+    private DoctorAgendaViewModel viewModel;
+    private AgendaDoctorAdapter adapter;
+
+    private RecyclerView rvAgenda;
+    private SwipeRefreshLayout swipeRefresh;
+    private ProgressBar progressBar;
+    private View emptyState;
+    private TextView tvSummary, tvDia, tvEmptyTitle, tvEmptyHint;
+    private MaterialButton btnReintentar;
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_agenda_doctor, container, false);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        rvAgenda = view.findViewById(R.id.rvAgenda);
+        swipeRefresh = view.findViewById(R.id.swipeRefresh);
+        progressBar = view.findViewById(R.id.progressBar);
+        emptyState = view.findViewById(R.id.emptyState);
+        tvSummary = view.findViewById(R.id.tvSummary);
+        tvDia = view.findViewById(R.id.tvDia);
+        tvEmptyTitle = view.findViewById(R.id.tvEmptyTitle);
+        tvEmptyHint = view.findViewById(R.id.tvEmptyHint);
+        btnReintentar = view.findViewById(R.id.btnReintentar);
+
+        adapter = new AgendaDoctorAdapter();
+        rvAgenda.setLayoutManager(new LinearLayoutManager(requireContext()));
+        rvAgenda.setAdapter(adapter);
+
+        viewModel = new ViewModelProvider(this).get(DoctorAgendaViewModel.class);
+
+        if (swipeRefresh != null) {
+            swipeRefresh.setColorSchemeResources(R.color.primary);
+            swipeRefresh.setOnRefreshListener(() -> viewModel.refrescar());
+        }
+        if (btnReintentar != null) {
+            btnReintentar.setOnClickListener(v -> viewModel.refrescar());
+        }
+
+        view.findViewById(R.id.btnDiaAnterior).setOnClickListener(v -> {
+            String actual = viewModel.getDia().getValue();
+            if (actual != null) {
+                viewModel.seleccionarDia(DoctorAgendaViewModel.diaAnterior(actual));
+            }
+        });
+        view.findViewById(R.id.btnDiaSiguiente).setOnClickListener(v -> {
+            String actual = viewModel.getDia().getValue();
+            if (actual != null) {
+                viewModel.seleccionarDia(DoctorAgendaViewModel.diaSiguiente(actual));
+            }
+        });
+        view.findViewById(R.id.btnHoy).setOnClickListener(v ->
+                viewModel.seleccionarDia(DoctorAgendaViewModel.hoy()));
+
+        viewModel.getAgenda().observe(getViewLifecycleOwner(), this::render);
+        viewModel.getDia().observe(getViewLifecycleOwner(), this::renderDia);
+        viewModel.getDeNube().observe(getViewLifecycleOwner(), this::renderOrigen);
+
+        viewModel.cargar();
+    }
+
+    private void renderDia(@Nullable String dia) {
+        if (tvDia == null || dia == null || dia.isEmpty()) {
+            return;
+        }
+        String texto = AgendaDoctorAdapter.formatearFecha(dia);
+        tvDia.setText(dia.equals(DoctorAgendaViewModel.hoy())
+                ? getString(R.string.agenda_hoy_fecha, texto)
+                : texto);
+    }
+
+    private void renderOrigen(@Nullable Boolean deNube) {
+        if (tvSummary == null || deNube == null) {
+            return;
+        }
+        tvSummary.setText(deNube
+                ? R.string.agenda_subtitle
+                : R.string.agenda_subtitle_local);
+    }
+
+    private void render(@Nullable Resource<List<Appointment>> recurso) {
+        if (recurso == null) {
+            return;
+        }
+        if (swipeRefresh != null && swipeRefresh.isRefreshing()) {
+            swipeRefresh.setRefreshing(false);
+        }
+
+        if (recurso.status == Resource.Status.LOADING) {
+            mostrarCargando();
+            return;
+        }
+
+        if (recurso.status == Resource.Status.ERROR) {
+            mostrarError(recurso.message);
+            return;
+        }
+
+        mostrarLista(recurso.data);
+    }
+
+    private void mostrarCargando() {
+        if (progressBar != null) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
+        if (emptyState != null) {
+            emptyState.setVisibility(View.GONE);
+        }
+        if (rvAgenda != null) {
+            rvAgenda.setVisibility(View.GONE);
+        }
+    }
+
+    private void mostrarError(@Nullable String mensaje) {
+        if (progressBar != null) {
+            progressBar.setVisibility(View.GONE);
+        }
+        if (rvAgenda != null) {
+            rvAgenda.setVisibility(View.GONE);
+        }
+        adapter.submitList(null);
+        if (emptyState != null) {
+            emptyState.setVisibility(View.VISIBLE);
+        }
+        if (tvEmptyTitle != null) {
+            tvEmptyTitle.setText(mensaje != null && !mensaje.trim().isEmpty()
+                    ? mensaje : getString(R.string.loading_error));
+        }
+        if (tvEmptyHint != null) {
+            tvEmptyHint.setVisibility(View.GONE);
+        }
+        if (btnReintentar != null) {
+            btnReintentar.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void mostrarLista(@Nullable List<Appointment> citas) {
+        if (progressBar != null) {
+            progressBar.setVisibility(View.GONE);
+        }
+        if (btnReintentar != null) {
+            btnReintentar.setVisibility(View.GONE);
+        }
+        if (tvEmptyHint != null) {
+            tvEmptyHint.setVisibility(View.VISIBLE);
+        }
+
+        if (citas == null || citas.isEmpty()) {
+            adapter.submitList(null);
+            if (rvAgenda != null) {
+                rvAgenda.setVisibility(View.GONE);
+            }
+            if (emptyState != null) {
+                emptyState.setVisibility(View.VISIBLE);
+            }
+            if (tvEmptyTitle != null) {
+                tvEmptyTitle.setText(R.string.agenda_sin_citas);
+            }
+            if (tvEmptyHint != null) {
+                tvEmptyHint.setText(R.string.agenda_sin_citas_hint);
+            }
+            return;
+        }
+
+        if (emptyState != null) {
+            emptyState.setVisibility(View.GONE);
+        }
+        if (rvAgenda != null) {
+            rvAgenda.setVisibility(View.VISIBLE);
+        }
+        adapter.submitList(citas);
+
+        if (tvSummary != null) {
+            int activas = 0;
+            for (Appointment a : citas) {
+                if (a.getStatus() != AppointmentStatus.CANCELLED) {
+                    activas++;
+                }
+            }
+            tvSummary.setText(getResources().getQuantityString(
+                    R.plurals.agenda_resumen, activas, activas, citas.size()));
+        }
+    }
+}

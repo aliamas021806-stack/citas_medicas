@@ -7,6 +7,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -166,12 +168,57 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Guarda la sesión y <b>resuelve el rol</b> antes de entrar.
+     * <p>
+     * Sin este paso el rol nunca se sabría: Firebase Authentication sólo devuelve el
+     * correo y el {@code uid}. {@link FirestoreUserRepository} comprueba si la cuenta
+     * es administrador ({@code /users/{uid}}) o si tiene una ficha en {@code doctors}
+     * (por {@code uid} ya vinculado o por el correo de la invitación) y lo deja escrito
+     * en la sesión. Después se entra en la pestaña inicial del rol: el médico aterriza
+     * en su agenda y el administrador en el alta de médicos.
+     * <p>
+     * Si Firebase no está configurado (modo sin conexión) se entra directamente como
+     * paciente: no hay servidor a quien preguntar y la app debe seguir siendo usable.
+     */
     private void onAuthSuccess(User user) {
         SessionManager.getInstance(this).saveSession(user);
         Toast.makeText(this,
                 isRegisterMode ? R.string.welcome_register : R.string.welcome_login,
                 Toast.LENGTH_SHORT).show();
-        Navigator.navigateClearingStack(this, new Routes.Main(Routes.Tab.DOCTORS));
+
+        if (!com.tuempresa.citasmedicas.data.firebase.FirebaseConfig.isEnabled()) {
+            Navigator.navigateClearingStack(this, new Routes.Main(Routes.Tab.DOCTORS));
+            return;
+        }
+
+        final SessionManager session = SessionManager.getInstance(this);
+        final String uid = user.getId();
+        com.tuempresa.citasmedicas.data.firebase.FirestoreUserRepository roles =
+                new com.tuempresa.citasmedicas.data.firebase.FirestoreUserRepository(this);
+
+        setLoading(true);
+        roles.cargarRol(uid, user.getEmail(),
+                new com.tuempresa.citasmedicas.data.firebase.FirestoreUserRepository
+                        .RoleCallback() {
+                    @Override
+                    public void onRole(@NonNull com.tuempresa.citasmedicas.model.UserRole role,
+                                       @Nullable String doctorId) {
+                        session.updateRole(role, doctorId);
+                        setLoading(false);
+                        Navigator.navigateClearingStack(LoginActivity.this,
+                                new Routes.Main(Navigator.homeTabForRole(role)));
+                    }
+
+                    @Override
+                    public void onFallback(@NonNull String motivo) {
+                        // Sin red o sin documento de rol: se entra como paciente. Es el
+                        // permiso mínimo y no impide usar la app.
+                        setLoading(false);
+                        Navigator.navigateClearingStack(LoginActivity.this,
+                                new Routes.Main(Routes.Tab.DOCTORS));
+                    }
+                });
     }
 
     private void setLoading(boolean loading) {

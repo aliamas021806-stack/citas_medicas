@@ -87,11 +87,26 @@ public final class Routes {
     }
 
     // ------------------------------------------------------------- pestañas
-    /** Identificadores de las pestañas del BottomNavigationView. */
+    /**
+     * Identificadores de las pestañas del BottomNavigationView.
+     * <p>
+     * Hay tres juegos de pestañas porque cada rol ve una cosa distinta:
+     * <ul>
+     *   <li><b>Paciente:</b> Doctores, Mis Citas, Perfil.</li>
+     *   <li><b>Médico:</b> Mi Agenda, Perfil.</li>
+     *   <li><b>Administrador:</b> Médicos (alta), Perfil.</li>
+     * </ul>
+     * El id es el del recurso de menú, así que {@code bottomNav.setSelectedItemId}
+     * funciona igual en los tres casos.
+     */
     public static final class Tab {
         public static final int DOCTORS = R.id.nav_doctors;
         public static final int APPOINTMENTS = R.id.nav_appointments;
         public static final int PROFILE = R.id.nav_profile;
+        /** Agenda del día (sólo médico). */
+        public static final int AGENDA = R.id.nav_agenda;
+        /** Alta de médicos (sólo administrador). */
+        public static final int ADMIN = R.id.nav_admin;
 
         private Tab() {
         }
