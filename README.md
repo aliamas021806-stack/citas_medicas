@@ -6,36 +6,53 @@
 >
 > **Descarga directa del APK, sin cuenta de GitHub y sin Android Studio:**
 >
-> ## 📲 [⬇️ Descargar CitasMedicas-v3.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v3.0/CitasMedicas-v3.0.apk)
+> ## 📲 [⬇️ Descargar CitasMedicas-v4.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v4.0/CitasMedicas-v4.0.apk)
 >
-> - **Android 7.0+** · 5.4 MB · firmado y listo para instalar
-> - Login: cualquier correo válido + contraseña de 4 caracteres (ej. `profesor@universidad.edu` / `1234`)
-> - **Funciona 100 % sin internet** · no requiere crear cuenta
-> - 📄 Guía extendida: **[PROBAR_APP.md](PROBAR_APP.md)** · 🏷️ [Página de la release v3.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0)
+> - **Android 7.0+** · 5.4 MB (5 653 453 bytes) · firmado y listo para instalar
+> - ✅ **Esta es la versión con Firebase conectado.** La v3.0 es anterior a la integración: no sincroniza nada.
+> - **Primero pulsa «Registro»** y crea tu cuenta (nombre, edad, correo y contraseña de **6+ caracteres**).
+>   Después entra con ese correo. Con Firebase activo el login **valida de verdad**: un correo
+>   inventado responde *«No hay ninguna cuenta con ese correo»*.
+> - ⚠️ **Necesitas internet para registrarte o iniciar sesión** (Firebase valida de verdad).
+>   Una vez dentro, la app **sigue funcionando sin conexión**: las citas se guardan en
+>   SQLite y el catálogo se sirve desde el respaldo local.
+> - 📄 Guía extendida: **[PROBAR_APP.md](PROBAR_APP.md)** · 🏷️ [Página de la release v4.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v4.0)
 >
 > 🔥 **¿Quieres conectar tu base de datos de Firebase?** → **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**
+>
+> ### 🔍 Cómo saber si tienes la versión correcta
+>
+> Abre la app → pestaña **Perfil**, y mira la etiqueta gris bajo tu correo:
+>
+> | Lo que muestra Perfil | Qué versión tienes |
+> |---|---|
+> | **«Conectado a Firebase (citas-medicas-e19ca)»** | ✅ **v4.0 — la correcta** |
+> | **«Datos de prueba (sin base de datos)»** | ❌ versión antigua (v3.0 o anterior): vuelve a descargar la v4.0 |
 
 ---
 
 Aplicación Android **nativa en Java** para gestionar citas médicas, construida con
-arquitectura **MVVM**, una **API local simulada (Mock)** 100% offline y persistencia
-local con **Room (SQLite)**.
+arquitectura **MVVM**, persistencia local con **Room (SQLite)** y sincronización
+opcional con **Firebase** (Authentication + Cloud Firestore) por REST.
 
 > Proyecto listo para **Android Studio** y con **GitHub Actions** que genera el APK
-> automáticamente en cada push. No requiere backend real ni conexión a internet.
+> automáticamente en cada push. **Funciona sin conexión**: Room es la fuente de
+> verdad para la interfaz y Firestore es una capa adicional de sincronización.
 
 ---
 
 ## ✨ Características
 
-- 🔐 **Login / Registro simulado** con validación y campo de **edad**.
+- 🔐 **Login / Registro** con validación y campo de **edad** (real contra Firebase
+  Authentication cuando está configurado; local en caso contrario).
 - 🏥 **Listado de especialidades médicas** (8 especialidades).
 - 👨‍⚕️ **Listado de doctores** con búsqueda, con su **edad**, rating y hospital.
 - 📅 **Detalle del doctor** + selección de **fecha y horario** disponibles.
 - 📋 **Mis Citas Médicas**: crear, ver y **cancelar** citas (guardadas en el teléfono).
 - 👤 **Perfil de usuario** con expediente del paciente.
 - 🎂 **Edad del PACIENTE** presente en la API y visible en la app (datos generados por IA).
-- 📶 **100% offline**: la "API" responde localmente mediante un interceptor de red.
+- 📶 **Funciona sin conexión** una vez iniciada la sesión: el catálogo se sirve desde
+  un respaldo local y las citas se guardan en SQLite.
 
 ---
 
@@ -43,9 +60,10 @@ local con **Room (SQLite)**.
 
 | Archivo | Enlace | Uso |
 |---|---|---|
-| **APK (v3.0)** | [⬇️ CitasMedicas-v3.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v3.0/CitasMedicas-v3.0.apk) | Instalar y probar en un teléfono Android |
-| **AAB (v3.0)** | [⬇️ CitasMedicas-v3.0.aab](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v3.0/CitasMedicas-v3.0.aab) | Publicar en Google Play |
-| Release v3.0 | [Página de la release](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0) | Notas de la versión y verificación del APK |
+| **APK (v4.0)** ✅ | [⬇️ CitasMedicas-v4.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v4.0/CitasMedicas-v4.0.apk) | **Instala esta.** Firebase conectado |
+| **AAB (v4.0)** | [⬇️ CitasMedicas-v4.0.aab](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v4.0/CitasMedicas-v4.0.aab) | Publicar en Google Play |
+| Release v4.0 | [Página de la release](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v4.0) | Notas de la versión y verificación del APK |
+| ~~v3.0~~ | [Release v3.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0) | ⚠️ **Obsoleta**: sin Firebase, sin sincronización |
 | Todas las versiones | [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) | Historial de versiones |
 
 > 📖 Instrucciones detalladas de instalación y recorrido de prueba:
@@ -58,14 +76,26 @@ local con **Room (SQLite)**.
 ### 🔐 Verificación del APK publicado
 
 ```
-Archivo    : CitasMedicas-v3.0.apk
-Bytes      : 5631143  (5.4 MB)
-SHA-256    : dc2de6f64d2031e0a73a4edc0b4a53eab71707dc9650c440185e41dc807340b7
+Archivo    : CitasMedicas-v4.0.apk
+Bytes      : 5653453  (5.4 MB)
+SHA-256    : 60590ad87009804088c58f58df885293bd9350c93090c72edf8409e092df9347
 Firma      : v1 + v2 + v3 (keystore de release)
 Cert SHA256: 3df1af33ce2aae8a300723a6509db9f061df334bad97d8a2e6ae485eff7ec5b4
 Paquete    : com.tuempresa.citasmedicas
-Versión    : 3.0 (versionCode 3)
+Versión    : 4.0 (versionCode 4)
 ```
+
+Para comprobar que la descarga no se ha corrompido:
+
+```bash
+# Windows (PowerShell)
+Get-FileHash CitasMedicas-v4.0.apk -Algorithm SHA256
+
+# macOS / Linux
+shasum -a 256 CitasMedicas-v4.0.apk
+```
+
+El resultado debe empezar por `60590ad8…`.
 
 ## 🏗️ Arquitectura (MVVM + Clean Architecture)
 
@@ -86,8 +116,8 @@ Versión    : 3.0 (versionCode 3)
             │
    ┌────────┴─────────┐
    ▼                  ▼
- API Mock (Retrofit)  Room (SQLite)
- datos simulados     citas reales
+ Firestore (REST)    Room (SQLite)
+ + respaldo local    citas reales (offline)
 ```
 
 - **Vista** → `Activity` / `Fragment` + `RecyclerView.Adapter`. **No conoce Room.**
@@ -98,19 +128,18 @@ Versión    : 3.0 (versionCode 3)
 - **Repository** → implementa la interfaz correspondiente.
 - **Model** → POJOs (`Doctor`, `Patient`, `Appointment`, `Specialty`, `TimeSlot`...).
 
-### 🔌 Puntos de extensión preparados para Firestore
+### 🔌 Implementación activa en la v4.0
 
-La app está estructurada para que conectar un backend real **no obligue a tocar la UI**.
-Todo lo que hay que cambiar está concentrado en `data/RepositoryProvider`:
+Todo lo que decide qué backend se usa está concentrado en `data/RepositoryProvider`:
 
-| Interfaz (dominio) | Implementación actual | Sustituible por |
+| Interfaz (dominio) | Implementación con Firebase activo | Respaldo si falla |
 |---|---|---|
-| `IAuthRepository` | `AuthRepository` (simulada) | `FirebaseAuthRepository` |
-| `IDoctorRepository` | `DoctorRepository` (mock Retrofit) | `FirestoreDoctorRepository` |
-| `IPatientRepository` | `PatientRepository` (mock Retrofit) | `FirestorePatientRepository` |
-| `IAppointmentRepository` | `AppointmentRepository` (Room) | **se conserva**: Firestore se añade como sincronizador |
+| `IAuthRepository` | `FirebaseAuthRepository` (Identity Toolkit) | `AuthRepository` (solo ante error de **configuración**) |
+| `IDoctorRepository` | `FirestoreDoctorRepository` | `DoctorRepository` (mock Retrofit) |
+| `IPatientRepository` | `FirestorePatientRepository` | `PatientRepository` (mock Retrofit) |
+| `IAppointmentRepository` | `FirestoreAppointmentRepository` **+ Room** | Room siempre (funciona offline) |
 
-**Para migrar bastará cambiar el `return` de un método del provider.** Los
+**Para cambiar de backend basta el `return` de un método del provider.** Los
 `ViewModel`, los casos de uso y las pantallas no se tocan.
 
 > 💡 Las citas son el caso especial: **Room sigue siendo la fuente de verdad de la UI**
@@ -154,10 +183,15 @@ CitasMedicas/
 
 ---
 
-## 🔌 API simulada (Mock)
+## 🔌 API simulada (Mock) — respaldo offline
 
-No hay servidor real. `MockInterceptor` (OkHttp) intercepta las peticiones y responde
-con datos generados en `MockData.java`. Los **endpoints** disponibles son:
+> ℹ️ En la **v4.0** la fuente principal es **Firestore**. Esta API simulada se
+> conserva como **red de seguridad**: si Firestore no responde (sin internet,
+> cuota agotada o proyecto sin configurar), `FirestoreFallback` sirve estos datos
+> para que la app siga siendo utilizable.
+
+`MockInterceptor` (OkHttp) intercepta las peticiones y responde con datos generados
+en `MockData.java`. Los **endpoints** disponibles son:
 
 | Método | Endpoint | Descripción |
 |---|---|---|
@@ -202,11 +236,11 @@ limpio con **JDK 21** y **Android SDK 34**:
 | Comprobación | Resultado |
 |---|---|
 | Compilación (`assembleDebug` / `assembleRelease` / `bundleRelease`) | ✅ **BUILD SUCCESSFUL** |
-| Pruebas automatizadas | ✅ **203 tests · 0 fallos · 0 errores** |
+| Pruebas automatizadas | ✅ **230 tests · 0 fallos · 0 errores** |
 | Android Lint | ✅ **0 problemas** (`No issues found`) |
 | Archivos Kotlin (`.kt` / `.kts`) | ✅ **0** — proyecto 100% Java |
 | APK release | 5.4 MB · firmado · instalable |
-| AAB release | 4.9 MB |
+| AAB release | 4.8 MB (5 059 976 bytes) |
 
 ### 🧪 Pruebas incluidas
 
@@ -266,17 +300,17 @@ pruebas → APK de release → AAB → subida de artefactos (`app-release-apk`,
 
 ## 🚧 Hoja de ruta
 
-### Próximo paso: base de datos real con Firebase
+### ✅ Base de datos real con Firebase — IMPLEMENTADA
 
-La app funciona hoy con una **API simulada** y **Room**. El siguiente paso previsto
-es sustituir los datos sintéticos por persistencia real en la nube:
+La app **ya está conectada** a Firebase (Authentication + Cloud Firestore) por REST,
+manteniendo **Room** como caché y fuente de verdad offline. Así queda cada ámbito:
 
-| Ámbito | Hoy | Con Firebase |
+| Ámbito | Antes | Ahora (v4.0) |
 |---|---|---|
-| Autenticación | Simulada (valida formato) | **Firebase Authentication** (email/contraseña real) |
-| Doctores, especialidades y pacientes | `MockData` + `MockInterceptor` | **Cloud Firestore** (`doctors`, `specialties`, `patients`) |
-| Citas | Room local (SQLite) | **Firestore** (`appointments`) + Room como caché offline |
-| Sincronización | — | Firestore offline persistence |
+| Autenticación | Simulada (valida formato) | ✅ **Firebase Authentication** (email/contraseña real) |
+| Doctores, especialidades y pacientes | `MockData` + `MockInterceptor` | ✅ **Cloud Firestore** (`doctors`, `specialties`, `patients`) con respaldo local |
+| Citas | Room local (SQLite) | ✅ **Firestore** (`appointments`) + Room como caché offline |
+| Sincronización | — | ✅ Crear, **cancelar** y **borrar** se replican en Firestore |
 
 **Por qué la arquitectura actual ya está preparada:** la app nunca habla con
 Retrofit ni con Room directamente. La cadena es

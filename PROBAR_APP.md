@@ -12,16 +12,19 @@ necesidad de Android Studio, sin emulador y sin conocimientos técnicos.
 
 **Descarga directa (no hace falta cuenta de GitHub):**
 
-### 👉 [Descargar CitasMedicas-v3.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v3.0/CitasMedicas-v3.0.apk)
+### 👉 [Descargar CitasMedicas-v4.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v4.0/CitasMedicas-v4.0.apk)
 
-- Tamaño: **5.4 MB** (5 631 143 bytes)
-- Versión: **3.0**
+- Tamaño: **5.4 MB** (5 653 453 bytes)
+- Versión: **4.0** (versionCode 4)
 - Requisito: **Android 7.0 o superior** (API 24+)
 - Firmado con certificado de release ✅
 
+> ⚠️ **La v3.0 está obsoleta.** Es anterior a la integración de Firebase: no
+> sincroniza las citas con la base de datos. Descarga siempre la **v4.0**.
+
 > Si prefieres ver todas las versiones, entra en
 > [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) o en la
-> [página de la release v3.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0).
+> [página de la release v4.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v4.0).
 
 ---
 
@@ -44,30 +47,44 @@ Toca **"Instalar de todas formas"**.
 Con el teléfono conectado por USB y la *Depuración USB* activada:
 
 ```bash
-adb install CitasMedicas-v3.0.apk
+adb install CitasMedicas-v4.0.apk
 ```
 
 ---
 
-## 🔑 Paso 3 — Iniciar sesión
+## 🔑 Paso 3 — Crear la cuenta e iniciar sesión
 
-La app **no necesita internet** ni crear una cuenta real: la autenticación es
-simulada y valida el formato de los datos.
+> ⚠️ **Cambio importante respecto a la v3.0.** Esta versión sí está conectada a
+> Firebase, así que el login **valida de verdad**: **no** entra con un correo
+> inventado. Si escribes uno que no existe, la app responde
+> *«No hay ninguna cuenta con ese correo»*.
 
-| Campo | Qué escribir |
-|---|---|
-| **Correo** | Cualquier correo con formato válido, por ejemplo `profesor@universidad.edu` |
-| **Contraseña** | Cualquier texto de **4 caracteres o más**, por ejemplo `1234` |
+**Lo más rápido: regístrate primero.**
 
-Para probar también el **registro** (con nombre y edad):
-toca el texto azul de abajo del formulario, **"¿No tienes cuenta? Regístrate"**.
-Aparecerán los campos de **nombre** y **edad**, que son obligatorios en ese modo.
+1. En la pantalla de login, toca el texto azul **«¿No tienes cuenta? Regístrate»**.
+2. Rellena los campos. En modo registro hay dos más, obligatorios:
+
+   | Campo | Qué escribir |
+   |---|---|
+   | **Nombre** | Tu nombre (ej. `Profesor`) |
+   | **Edad** | Un número (ej. `40`) |
+   | **Correo** | Un correo con formato válido (ej. `profesor@universidad.edu`) |
+   | **Contraseña** | **Mínimo 6 caracteres** (ej. `123456`) — Firebase rechaza menos |
+
+3. Pulsa **Registrarse**. Entrarás directamente y la cuenta quedará creada en
+   Firebase Authentication.
+4. La próxima vez, ya puedes usar el modo **login** con ese mismo correo y contraseña.
+
+> 💡 **¿Sin internet?** Si Firebase no responde por un problema de *configuración*
+> del proyecto, la app recurre a la validación local para que puedas seguir
+> probando. Pero **si las credenciales son incorrectas, NO deja pasar**: es
+> intencionado, para no abrir un agujero de seguridad.
 
 ---
 
 ## 🧪 Paso 4 — Recorrido recomendado para la evaluación
 
-Todo lo que sigue funciona **sin conexión a internet**.
+Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin conexión**.
 
 ### 1. Pantalla de Doctores (inicio)
 - Se muestran las **8 especialidades** en una fila horizontal y la **lista de doctores**.
@@ -91,7 +108,11 @@ Todo lo que sigue funciona **sin conexión a internet**.
 
 ### 4. Perfil
 - Toca **Perfil** para ver tus datos, tus iniciales, tu edad y el **expediente del
-  paciente** (grupo sanguíneo, teléfono, seguro, alergias) que llega desde la API simulada.
+  paciente** (grupo sanguíneo, teléfono, seguro, alergias).
+- **Aquí puedes comprobar la versión:** bajo tu correo hay una etiqueta gris.
+  Debe decir **«Conectado a Firebase (citas-medicas-e19ca)»**.
+  Si dice **«Datos de prueba (sin base de datos)»**, tienes instalada una versión
+  antigua (v3.0 o anterior): desinstálala e instala la **v4.0**.
 - Los contadores muestran **citas próximas** y **total**.
 
 ### 5. Persistencia (punto importante)
@@ -111,15 +132,15 @@ Todo lo que sigue funciona **sin conexión a internet**.
 
 | Punto | Detalle |
 |---|---|
-| **No hay backend real** | Los datos de doctores y pacientes son sintéticos y los genera un interceptor de red local (`MockInterceptor`). El stack Retrofit + OkHttp + Gson es real; solo se sustituye la respuesta. |
-| **Sin conexión** | La app funciona 100 % offline a propósito. |
-| **La contraseña no se valida contra un servidor** | Solo se comprueba el formato. Es una autenticación simulada. |
+| **Ya hay backend real** | La v4.0 está conectada a **Firebase** (Authentication + Cloud Firestore). El catálogo de doctores y pacientes se lee de Firestore. |
+| **La contraseña SÍ se valida en el servidor** | El login se resuelve contra Firebase Authentication. Si la cuenta no existe, la app lo dice. |
+| **Internet** | Hace falta para **registrarse y entrar**. Ya dentro, la app funciona sin conexión: las citas se guardan en SQLite y el catálogo usa el respaldo local. |
 | **Datos de ejemplo** | El sembrado de "Mis Citas" se hace una única vez, la primera vez que se abre la app. |
 | **Keystore incluida** | El repositorio incluye la keystore de demostración para que CI pueda firmar el APK sin secretos. En producción nunca se subiría. |
 
-> 🚧 **Siguiente paso previsto:** conectar una base de datos real
-> (**Firebase / Firestore**) para sustituir los datos simulados por datos
-> persistentes en la nube con autenticación real.
+> ✅ **Siguiente paso (ya hecho):** la base de datos real con
+> **Firebase / Firestore** está integrada desde la v4.0. Para conectarla a tu propio
+> proyecto, sigue **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**.
 
 ---
 
@@ -127,24 +148,24 @@ Todo lo que sigue funciona **sin conexión a internet**.
 
 Si quieres comprobar que el archivo descargado es exactamente el que generó la CI:
 
-**SHA-256** (versión 3.0, APK publicado en la release `v3.0`):
+**SHA-256** (versión 4.0, APK publicado en la release `v4.0`):
 
 ```
-dc2de6f64d2031e0a73a4edc0b4a53eab71707dc9650c440185e41dc807340b7
+60590ad87009804088c58f58df885293bd9350c93090c72edf8409e092df9347
 ```
 
-Tamaño exacto: **5 631 143 bytes** (5.4 MB).
+Tamaño exacto: **5 653 453 bytes** (5.4 MB).
 
 Comprobar en Linux/macOS:
 
 ```bash
-sha256sum CitasMedicas-v3.0.apk
+sha256sum CitasMedicas-v4.0.apk
 ```
 
 En Windows (PowerShell):
 
 ```powershell
-Get-FileHash CitasMedicas-v3.0.apk -Algorithm SHA256
+Get-FileHash CitasMedicas-v4.0.apk -Algorithm SHA256
 ```
 
 Los dos valores deben coincidir.
@@ -176,7 +197,8 @@ SHA-256: 3df1af33ce2aae8a300723a6509db9f061df334bad97d8a2e6ae485eff7ec5b4
 | **Contratos de repositorio (interfaces)** | `domain/repository/` |
 | **Raíz de composición (qué implementación se usa)** | `data/RepositoryProvider.java` |
 | Implementaciones de repositorio | `data/repository/` |
-| API simulada (Retrofit + Mock) | `data/remote/` |
+| **Firebase por REST (Auth + Firestore)** | `data/firebase/` |
+| API simulada (Retrofit + Mock) | `data/remote/` y `data/mock/` |
 | Base de datos local (Room) | `data/local/` |
 | Navegación tipada | `navigation/` |
 | Tema, colores y tamaños (Material 3) | `res/values/` |
