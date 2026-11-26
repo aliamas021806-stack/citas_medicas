@@ -12,19 +12,19 @@ necesidad de Android Studio, sin emulador y sin conocimientos técnicos.
 
 **Descarga directa (no hace falta cuenta de GitHub):**
 
-### 👉 [Descargar CitasMedicas-v5.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v5.0/CitasMedicas-v5.0.apk)
+### 👉 [Descargar CitasMedicas-v6.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.0/CitasMedicas-v6.0.apk)
 
-- Tamaño: **5.4 MB** (5 659 699 bytes)
-- Versión: **5.0** (versionCode 5)
+- Tamaño: **5.4 MB** (5 704 849 bytes)
+- Versión: **6.0** (versionCode 6)
 - Requisito: **Android 7.0 o superior** (API 24+)
 - Firmado con certificado de release ✅
 
 > ⚠️ **La v3.0 está obsoleta.** Es anterior a la integración de Firebase: no
-> sincroniza las citas con la base de datos. Descarga siempre la **v5.0**.
+> sincroniza las citas con la base de datos. Descarga siempre la **v6.0**.
 
 > Si prefieres ver todas las versiones, entra en
 > [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) o en la
-> [página de la release v5.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v5.0).
+> [página de la release v6.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v6.0).
 
 ---
 
@@ -47,7 +47,7 @@ Toca **"Instalar de todas formas"**.
 Con el teléfono conectado por USB y la *Depuración USB* activada:
 
 ```bash
-adb install CitasMedicas-v5.0.apk
+adb install CitasMedicas-v6.0.apk
 ```
 
 ---
@@ -112,7 +112,7 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 - **Aquí puedes comprobar la versión:** bajo tu correo hay una etiqueta gris.
   Debe decir **«Conectado a Firebase (citas-medicas-e19ca)»**.
   Si dice **«Datos de prueba (sin base de datos)»**, tienes instalada una versión
-  antigua (v3.0 o anterior): desinstálala e instala la **v5.0**.
+  antigua (v3.0 o anterior): desinstálala e instala la **v6.0**.
 - Los contadores muestran **citas próximas** y **total**.
 
 ### 5. Persistencia (punto importante)
@@ -132,7 +132,7 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 
 | Punto | Detalle |
 |---|---|
-| **Ya hay backend real** | La v5.0 está conectada a **Firebase** (Authentication + Cloud Firestore). El catálogo de doctores y pacientes se lee de Firestore. |
+| **Ya hay backend real** | La v6.0 está conectada a **Firebase** (Authentication + Cloud Firestore). El catálogo de doctores y pacientes se lee de Firestore. |
 | **La contraseña SÍ se valida en el servidor** | El login se resuelve contra Firebase Authentication. Si la cuenta no existe, la app lo dice. |
 | **Internet** | Hace falta para **registrarse y entrar**. Ya dentro, la app funciona sin conexión: las citas se guardan en SQLite y el catálogo usa el respaldo local. |
 | **Datos de ejemplo** | El sembrado de "Mis Citas" se hace una única vez, la primera vez que se abre la app. |
@@ -148,24 +148,24 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 
 Si quieres comprobar que el archivo descargado es exactamente el que generó la CI:
 
-**SHA-256** (versión 5.0, APK publicado en la release `v5.0`):
+**SHA-256** (versión 5.0, APK publicado en la release `v6.0`):
 
 ```
-c11be226dac0d5e2f0e4d6a574614c99c7a0dfe5c61a467a90ac643dfc5d6b5b
+89350892697aaefd9d3d59bb8fdfba8d7e92f6f843a9d4264747e2742079c763
 ```
 
-Tamaño exacto: **5 659 699 bytes** (5.4 MB).
+Tamaño exacto: **5 704 849 bytes** (5.4 MB).
 
 Comprobar en Linux/macOS:
 
 ```bash
-sha256sum CitasMedicas-v5.0.apk
+sha256sum CitasMedicas-v6.0.apk
 ```
 
 En Windows (PowerShell):
 
 ```powershell
-Get-FileHash CitasMedicas-v5.0.apk -Algorithm SHA256
+Get-FileHash CitasMedicas-v6.0.apk -Algorithm SHA256
 ```
 
 Los dos valores deben coincidir.
@@ -235,3 +235,69 @@ El APK queda en `app/build/outputs/apk/release/app-release.apk`.
 | **No aparece "Instalar apps desconocidas"** | Ajustes → Apps → Acceso especial → Instalar apps desconocidas → elige tu navegador. |
 | **La app se ve con una sola columna en la tablet** | Es correcto en pantallas pequeñas; a partir de 600 dp de ancho se activa la vista de dos paneles. |
 | **No hay citas en "Mis Citas"** | Solo se crean la primera vez. Desinstala y reinstala para volver a verlas, o agenda una nueva. |
+
+---
+
+## 👨‍⚕️ Portal del médico y alta de médicos (novedad v6.0)
+
+La app ahora tiene **tres roles** y cada uno ve una cosa distinta:
+
+| Rol | Pestañas | Qué hace |
+|---|---|---|
+| **Paciente** | Doctores · Mis Citas · Perfil | Reserva y ve **sólo sus** citas |
+| **Médico** | Mi Agenda · Perfil | Ve las citas **que le tocan** cada día |
+| **Administrador** | Médicos · Perfil | **Da de alta médicos** sin tocar la base de datos |
+
+### Paso 1 — Publicar las reglas (obligatorio)
+
+Sin esto, el médico no verá sus citas y el alta de médicos dará error 403.
+
+1. Abre **Firebase Console** → **Firestore Database** → pestaña **«Reglas»**.
+2. Selecciona **todo** el texto y pega el contenido completo del archivo
+   [`firestore.rules`](firestore.rules) del repositorio (reemplaza lo anterior).
+3. Pulsa **«Publicar»**.
+
+### Paso 2 — Crear el primer administrador (una sola vez, a mano)
+
+Este paso **no se puede hacer desde la app a propósito**: si la app pudiera crear
+administradores, cualquiera con la API key —que es pública por diseño— podría hacerse
+admin y leer todos los expedientes.
+
+1. En Firebase Console → **Authentication** → pestaña **Users**, copia tu **User UID**
+   (una cadena larga de letras y números).
+2. Ve a **Firestore Database** → **Datos** → colección **`users`**.
+3. Crea el documento con **ID = tu UID** (pégalo tal cual) y estos campos:
+
+   | Campo | Tipo | Valor |
+   |---|---|---|
+   | `role` | string | `admin` |
+   | `email` | string | tu correo |
+   | `fullName` | string | tu nombre |
+
+4. Cierra sesión en la app y vuelve a entrar. Aparecerá la pestaña **«Médicos»**.
+
+### Paso 3 — Dar de alta un médico
+
+En la pestaña **«Médicos»** rellena: nombre, **correo del médico**, especialidad,
+hospital, edad, años de experiencia y tarifa. Al guardar:
+
+- La ficha se crea en la colección `doctors` y **aparece de inmediato** en la lista que
+  ven los pacientes.
+- La ficha queda marcada como **«Esperando que entre con su correo»**.
+
+Cuando esa persona abra la app, pulse **Regístrate** y use **ese mismo correo**, su
+cuenta se vincula a la ficha: el estado pasa a **«Cuenta vinculada»** y, al entrar,
+aterriza directamente en **Mi Agenda** con las citas que le hayan reservado.
+
+> ⚠️ **No le crees la cuenta tú.** El médico debe registrarse él mismo para elegir su
+> contraseña. Crear contraseñas por otros es un riesgo de seguridad y además queda
+> registrado en los logs.
+
+### Probar el flujo completo sin dos teléfonos
+
+1. Con tu cuenta **admin**, da de alta un médico con un correo que controles
+   (por ejemplo `medico.prueba@gmail.com`).
+2. Cierra sesión y **regístrate** con ese correo: entrarás como médico en **Mi Agenda**
+   (vacía, es correcto).
+3. Cierra sesión, entra con **otra** cuenta de paciente, agenda una cita con ese médico.
+4. Vuelve a entrar como médico: la cita aparece en el día correspondiente.

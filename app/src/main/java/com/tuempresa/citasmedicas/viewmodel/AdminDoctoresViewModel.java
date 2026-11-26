@@ -100,10 +100,22 @@ public class AdminDoctoresViewModel extends AndroidViewModel {
         });
     }
 
-    /** Id de especialidad normalizado a partir del nombre escrito. */
+    /**
+     * Id de especialidad normalizado a partir del nombre escrito.
+     * <p>
+     * <b>Los acentos se eliminan de verdad, no se sustituyen.</b> Si se aplicara sólo
+     * {@code [^a-z0-9] -> _}, "Cardiología" daría {@code cardiolog_a}, con un guion
+     * bajo en medio que rompe el id y no coincide con el de las especialidades ya
+     * existentes. {@link java.text.Normalizer} separa la letra de su tilde (NFD) y
+     * después se descartan las marcas diacríticas, así que "Cardiología" queda
+     * {@code cardiologia} y "Pediatría" queda {@code pediatria}.
+     */
     @NonNull
     public static String especialidadIdDesde(@NonNull String nombre) {
-        String limpio = nombre.trim().toLowerCase(java.util.Locale.ROOT)
+        String sinTildes = java.text.Normalizer
+                .normalize(nombre.trim(), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        String limpio = sinTildes.toLowerCase(java.util.Locale.ROOT)
                 .replaceAll("[^a-z0-9]+", "_");
         while (limpio.startsWith("_")) {
             limpio = limpio.substring(1);

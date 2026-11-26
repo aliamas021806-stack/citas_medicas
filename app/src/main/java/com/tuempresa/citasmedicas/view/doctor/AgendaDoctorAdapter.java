@@ -54,7 +54,11 @@ public class AgendaDoctorAdapter
                             && igual(a.getTime(), b.getTime())
                             && igual(a.getPatientName(), b.getPatientName())
                             && igual(a.getReason(), b.getReason())
-                            && a.getStatus() == b.getStatus();
+                            // Se usa equals() y no == para que la comprobación sea
+                            // explícita: con dos enums == ya compara identidad, pero
+                            // lint marca el operador como sospechoso dentro de DiffUtil
+                            // porque el mismo patrón con objetos daría un fallo sutil.
+                            && java.util.Objects.equals(a.getStatus(), b.getStatus());
                 }
             };
 

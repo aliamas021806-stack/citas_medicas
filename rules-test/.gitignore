@@ -1,0 +1,3 @@
+node_modules/
+# Copia generada por `npm test` (pretest) desde ../firestore.rules
+firestore.rules

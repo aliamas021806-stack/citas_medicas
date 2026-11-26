@@ -183,34 +183,46 @@ public class FirestoreUserRepository {
     }
 
     /**
-     * Escribe el {@code uid} en la ficha invitada.
+     * Escribe el {@code uid} en la ficha invitada y, en el mismo paso, guarda el
+     * {@code doctorId} en {@code /users/{uid}}.
      * <p>
-     * Es <i>best-effort</i>: si falla (por ejemplo porque las reglas no permiten que
-     * un médico edite su propia ficha), la vinculación por correo sigue funcionando,
-     * así que el médico igualmente entra. No se bloquea al usuario por esto.
+     * <b>Las dos escrituras son necesarias y las dos están verificadas por las reglas.</b>
+     * <ul>
+     *   <li>En {@code doctors} sólo se permite escribir el campo {@code userId}, y sólo
+     *       si el {@code email} de la ficha coincide con el correo del token y nadie la
+     *       había reclamado antes. Así un paciente no puede apropiarse de la ficha de
+     *       otro médico.</li>
+     *   <li>En {@code users} sólo se permite escribir {@code doctorId} si esa ficha
+     *       existe, tiene su correo y está libre. Es lo que convierte la cuenta en
+     *       «médico» sin que nadie pueda autoascenderse.</li>
+     * </ul>
+     * Ambas son <i>best-effort</i>: la vinculación por correo sigue funcionando aunque
+     * fallen, así que no se bloquea la entrada al médico.
      */
     private void vincularSiHaciaFalta(@NonNull Doctor doctor, @NonNull String uid) {
         if (doctor.isLinked() || doctor.getId() == null || doctor.getId().trim().isEmpty()) {
             return;
         }
-        Map<String, FirestoreApi.Value> f = new HashMap<>();
-        f.put("userId", FirestoreApi.ofString(uid));
 
-        FirestoreApi.FirestoreDocument doc = new FirestoreApi.FirestoreDocument();
-        doc.fields = f;
+        Map<String, FirestoreApi.Value> camposFicha = new HashMap<>();
+        camposFicha.put("userId", FirestoreApi.ofString(uid));
+
+        FirestoreApi.FirestoreDocument ficha = new FirestoreApi.FirestoreDocument();
+        ficha.fields = camposFicha;
 
         api.updateDocument(FirebaseConfig.COLLECTION_DOCTORS, doctor.getId(),
-                        new java.util.ArrayList<>(f.keySet()), doc)
+                        new java.util.ArrayList<>(camposFicha.keySet()), ficha)
                 .enqueue(new retrofit2.Callback<FirestoreApi.FirestoreDocument>() {
                     @Override
                     public void onResponse(
                             @NonNull Call<FirestoreApi.FirestoreDocument> call,
                             @NonNull Response<FirestoreApi.FirestoreDocument> response) {
                         if (response.isSuccessful()) {
-                            android.util.Log.i(TAG, "Médico vinculado a la cuenta " + uid);
+                            android.util.Log.i(TAG, "Ficha médica vinculada a la cuenta " + uid);
                         } else {
-                            android.util.Log.w(TAG, "No se pudo vincular la ficha (HTTP "
-                                    + response.code() + "); se seguirá usando el correo");
+                            android.util.Log.w(TAG, "No se pudo escribir userId en la ficha "
+                                    + "(HTTP " + response.code()
+                                    + "); se seguirá usando el correo");
                         }
                     }
 
@@ -218,6 +230,36 @@ public class FirestoreUserRepository {
                     public void onFailure(@NonNull Call<FirestoreApi.FirestoreDocument> call,
                                           @NonNull Throwable t) {
                         android.util.Log.w(TAG, "Sin conexión al vincular la ficha médica");
+                    }
+                });
+
+        // Segundo paso: dejar el doctorId en el perfil. Es lo que hace que las
+        // reglas de `appointments` devuelvan sólo las citas de este médico.
+        Map<String, FirestoreApi.Value> camposPerfil = new HashMap<>();
+        camposPerfil.put("doctorId", FirestoreApi.ofString(doctor.getId()));
+
+        FirestoreApi.FirestoreDocument perfil = new FirestoreApi.FirestoreDocument();
+        perfil.fields = camposPerfil;
+
+        api.updateDocument(COLLECTION_USERS, uid,
+                        new java.util.ArrayList<>(camposPerfil.keySet()), perfil)
+                .enqueue(new retrofit2.Callback<FirestoreApi.FirestoreDocument>() {
+                    @Override
+                    public void onResponse(
+                            @NonNull Call<FirestoreApi.FirestoreDocument> call,
+                            @NonNull Response<FirestoreApi.FirestoreDocument> response) {
+                        if (response.isSuccessful()) {
+                            android.util.Log.i(TAG, "doctorId guardado en el perfil de " + uid);
+                        } else {
+                            android.util.Log.w(TAG, "No se pudo guardar doctorId en el perfil "
+                                    + "(HTTP " + response.code() + ")");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<FirestoreApi.FirestoreDocument> call,
+                                          @NonNull Throwable t) {
+                        android.util.Log.w(TAG, "Sin conexión al guardar el doctorId");
                     }
                 });
     }

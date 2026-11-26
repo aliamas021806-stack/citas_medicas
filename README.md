@@ -6,9 +6,9 @@
 >
 > **Descarga directa del APK, sin cuenta de GitHub y sin Android Studio:**
 >
-> ## 📲 [⬇️ Descargar CitasMedicas-v5.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v5.0/CitasMedicas-v5.0.apk)
+> ## 📲 [⬇️ Descargar CitasMedicas-v6.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.0/CitasMedicas-v6.0.apk)
 >
-> - **Android 7.0+** · 5.4 MB (5 659 699 bytes) · firmado y listo para instalar
+> - **Android 7.0+** · 5.5 MB (5 704 849 bytes) · firmado y listo para instalar
 > - ✅ **Esta es la versión con Firebase conectado.** La v3.0 es anterior a la integración: no sincroniza nada.
 > - **Primero pulsa «Registro»** y crea tu cuenta (nombre, edad, correo y contraseña de **6+ caracteres**).
 >   Después entra con ese correo. Con Firebase activo el login **valida de verdad**: un correo
@@ -16,7 +16,7 @@
 > - ⚠️ **Necesitas internet para registrarte o iniciar sesión** (Firebase valida de verdad).
 >   Una vez dentro, la app **sigue funcionando sin conexión**: las citas se guardan en
 >   SQLite y el catálogo se sirve desde el respaldo local.
-> - 📄 Guía extendida: **[PROBAR_APP.md](PROBAR_APP.md)** · 🏷️ [Página de la release v5.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v5.0)
+> - 📄 Guía extendida: **[PROBAR_APP.md](PROBAR_APP.md)** · 🏷️ [Página de la release v6.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v6.0)
 >
 > 🔥 **¿Quieres conectar tu base de datos de Firebase?** → **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**
 >
@@ -26,8 +26,8 @@
 >
 > | Lo que muestra Perfil | Qué versión tienes |
 > |---|---|
-> | **«Conectado a Firebase (citas-medicas-e19ca)»** | ✅ **v5.0 — la correcta** |
-> | **«Datos de prueba (sin base de datos)»** | ❌ versión antigua (v3.0 o anterior): vuelve a descargar la v5.0 |
+> | **«Conectado a Firebase (citas-medicas-e19ca)»** | ✅ **v6.0 — la correcta** |
+> | **«Datos de prueba (sin base de datos)»** | ❌ versión antigua (v3.0 o anterior): vuelve a descargar la v6.0 |
 
 ---
 
@@ -60,9 +60,9 @@ opcional con **Firebase** (Authentication + Cloud Firestore) por REST.
 
 | Archivo | Enlace | Uso |
 |---|---|---|
-| **APK (v5.0)** ✅ | [⬇️ CitasMedicas-v5.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v5.0/CitasMedicas-v5.0.apk) | **Instala esta.** Firebase conectado |
-| **AAB (v5.0)** | [⬇️ CitasMedicas-v5.0.aab](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v5.0/CitasMedicas-v5.0.aab) | Publicar en Google Play |
-| Release v5.0 | [Página de la release](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v5.0) | Notas de la versión y verificación del APK |
+| **APK (v6.0)** ✅ | [⬇️ CitasMedicas-v6.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.0/CitasMedicas-v6.0.apk) | **Instala esta.** Firebase conectado |
+| **AAB (v6.0)** | [⬇️ CitasMedicas-v6.0.aab](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.0/CitasMedicas-v6.0.aab) | Publicar en Google Play |
+| Release v6.0 | [Página de la release](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v6.0) | Notas de la versión y verificación del APK |
 | ~~v3.0~~ | [Release v3.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v3.0) | ⚠️ **Obsoleta**: sin Firebase, sin sincronización |
 | Todas las versiones | [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) | Historial de versiones |
 
@@ -76,26 +76,26 @@ opcional con **Firebase** (Authentication + Cloud Firestore) por REST.
 ### 🔐 Verificación del APK publicado
 
 ```
-Archivo    : CitasMedicas-v5.0.apk
+Archivo    : CitasMedicas-v6.0.apk
 Bytes      : 5659699  (5.4 MB)
-SHA-256    : c11be226dac0d5e2f0e4d6a574614c99c7a0dfe5c61a467a90ac643dfc5d6b5b
+SHA-256    : 89350892697aaefd9d3d59bb8fdfba8d7e92f6f843a9d4264747e2742079c763
 Firma      : v1 + v2 + v3 (keystore de release)
 Cert SHA256: 3df1af33ce2aae8a300723a6509db9f061df334bad97d8a2e6ae485eff7ec5b4
 Paquete    : com.tuempresa.citasmedicas
-Versión    : 5.0 (versionCode 5)
+Versión    : 6.0 (versionCode 6)
 ```
 
 Para comprobar que la descarga no se ha corrompido:
 
 ```bash
 # Windows (PowerShell)
-Get-FileHash CitasMedicas-v5.0.apk -Algorithm SHA256
+Get-FileHash CitasMedicas-v6.0.apk -Algorithm SHA256
 
 # macOS / Linux
-shasum -a 256 CitasMedicas-v5.0.apk
+shasum -a 256 CitasMedicas-v6.0.apk
 ```
 
-El resultado debe empezar por `c11be226…`.
+El resultado debe empezar por `89350892…`.
 
 ## 🏗️ Arquitectura (MVVM + Clean Architecture)
 
@@ -128,7 +128,7 @@ El resultado debe empezar por `c11be226…`.
 - **Repository** → implementa la interfaz correspondiente.
 - **Model** → POJOs (`Doctor`, `Patient`, `Appointment`, `Specialty`, `TimeSlot`...).
 
-### 🔌 Implementación activa en la v5.0
+### 🔌 Implementación activa en la v6.0
 
 Todo lo que decide qué backend se usa está concentrado en `data/RepositoryProvider`:
 
@@ -185,7 +185,7 @@ CitasMedicas/
 
 ## 🔌 API simulada (Mock) — respaldo offline
 
-> ℹ️ En la **v5.0** la fuente principal es **Firestore**. Esta API simulada se
+> ℹ️ En la **v6.0** la fuente principal es **Firestore**. Esta API simulada se
 > conserva como **red de seguridad**: si Firestore no responde (sin internet,
 > cuota agotada o proyecto sin configurar), `FirestoreFallback` sirve estos datos
 > para que la app siga siendo utilizable.
@@ -236,7 +236,7 @@ limpio con **JDK 21** y **Android SDK 34**:
 | Comprobación | Resultado |
 |---|---|
 | Compilación (`assembleDebug` / `assembleRelease` / `bundleRelease`) | ✅ **BUILD SUCCESSFUL** |
-| Pruebas automatizadas | ✅ **242 tests · 0 fallos · 0 errores** |
+| Pruebas automatizadas | ✅ **273 tests · 0 fallos · 0 errores** |
 | Android Lint | ✅ **0 problemas** (`No issues found`) |
 | Archivos Kotlin (`.kt` / `.kts`) | ✅ **0** — proyecto 100% Java |
 | APK release | 5.4 MB · firmado · instalable |
@@ -300,12 +300,42 @@ pruebas → APK de release → AAB → subida de artefactos (`app-release-apk`,
 
 ## 🚧 Hoja de ruta
 
+### ✅ Portal del médico y alta de médicos — IMPLEMENTADO (v6.0)
+
+La app ya distingue **tres roles** y cada uno ve una aplicación distinta. El rol no
+viaja en el token (eso exigiría el Admin SDK), así que vive en el documento
+`/users/{uid}` de Firestore y las reglas de seguridad lo leen con `get()`.
+
+| Rol | Pestañas | Qué puede hacer |
+|---|---|---|
+| **Paciente** | Doctores · Mis Citas · Perfil | Reservar, ver y cancelar **sólo sus** citas |
+| **Médico** | Mi Agenda · Perfil | Ver las citas **que le tocan** cada día |
+| **Administrador** | Médicos · Perfil | **Dar de alta médicos** desde la app |
+
+**Cómo entra un médico.** No se le crea una contraseña (sería un riesgo). El
+administrador escribe su **correo** al darlo de alta; cuando el médico se registra en
+la app con ese mismo correo, su cuenta queda vinculada a la ficha y pasa a ver su
+agenda. Las reglas verifican esa vinculación: sólo se permite escribir el `userId` de
+una ficha si el correo de la ficha coincide con el del token y nadie la había
+reclamado antes. Un paciente no puede apropiarse de la ficha de otra persona.
+
+**Cómo ve el médico sus citas del día.** La consulta filtra por `doctorId` con **una
+sola igualdad** (sin índice compuesto, que es la causa habitual de que una consulta
+devuelva 400 y la lista salga vacía sin error visible) y ordena por fecha y hora en
+memoria. Tiene selector de día anterior/siguiente y, sin red, cae a lo guardado en el
+teléfono.
+
+📄 **Las reglas completas para publicar están en [`firestore.rules`](firestore.rules).**
+Incluye las instrucciones para crear el **primer administrador** (paso manual, una
+sola vez: si la app pudiera crear admins, cualquiera con la API key pública —que es
+pública por diseño— se haría admin).
+
 ### ✅ Base de datos real con Firebase — IMPLEMENTADA
 
 La app **ya está conectada** a Firebase (Authentication + Cloud Firestore) por REST,
 manteniendo **Room** como caché y fuente de verdad offline. Así queda cada ámbito:
 
-| Ámbito | Antes | Ahora (v5.0) |
+| Ámbito | Antes | Ahora (v6.0) |
 |---|---|---|
 | Autenticación | Simulada (valida formato) | ✅ **Firebase Authentication** (email/contraseña real) |
 | Doctores, especialidades y pacientes | `MockData` + `MockInterceptor` | ✅ **Cloud Firestore** (`doctors`, `specialties`, `patients`) con respaldo local |

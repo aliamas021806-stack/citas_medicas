@@ -1,0 +1,272 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  Citas Médicas — Reglas de seguridad de Cloud Firestore
+//  Proyecto: citas-medicas-e19ca
+//
+//  CÓMO PUBLICARLAS
+//    1. Firebase Console → Firestore Database → pestaña «Reglas».
+//    2. Selecciona todo el texto y pega esta versión completa (reemplaza todo).
+//    3. Pulsa «Publicar». Tarda unos segundos en aplicarse.
+//    4. Verifica: abre la app SIN sesión y comprueba que las citas no cargan.
+//
+//  MODELO DE ROLES
+//    El rol NO viaja en el token (eso exigiría el Admin SDK), así que vive en el
+//    documento /users/{uid}. Las reglas que necesitan el rol lo leen con get().
+//
+//    · Paciente: el valor por defecto. Se escribe al registrarse.
+//    · Médico:  se concede solo, pero de forma VERIFICABLE: la cuenta debe tener
+//               una ficha en /doctors cuyo campo email coincida con el correo de
+//               su token de Firebase. No basta con decir "soy médico".
+//    · Admin:   solo desde la consola (ver abajo). La app nunca lo escribe.
+//
+//  EL PRIMER ADMINISTRADOR (paso manual, una sola vez)
+//    Si la app pudiera crear un admin, cualquiera con la API key pública
+//    (que es pública por diseño) podría hacerse admin. Por eso el primero se crea
+//    a mano:
+//
+//      /users/{TU_UID}
+//        role     (string) = "admin"
+//        email    (string) = tu correo
+//        fullName (string) = tu nombre
+//
+//    TU_UID está en Firebase Console → Authentication → Users → columna «User UID».
+//    Después de eso ya puedes nombrar médicos desde la pantalla «Médicos» de la app.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══════════════════════ Ayudantes ═══════════════════════
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    // Correo del token, en minúsculas.
+    // Se usa get() con valor por defecto en lugar de acceder directamente a
+    // request.auth.token.email: si el token no trae ese claim, el acceso directo
+    // haría fallar la regla y denegaría operaciones legítimas. Con get() devuelve
+    // '' y las comparaciones simplemente no coinciden.
+    function miCorreo() {
+      return request.auth.token.get('email', '').lower();
+    }
+
+    // Documento de rol del llamante.
+    // Se comprueba exists() ANTES de leer .data: si el documento no existe, get()
+    // devuelve null y acceder a .data haría fallar la regla entera, denegando
+    // operaciones legítimas (un usuario de una versión anterior sin documento de
+    // rol no podría ni ver sus propias citas).
+    function tienePerfil() {
+      return autenticado()
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function miPerfil() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function miRol() {
+      return tienePerfil() ? miPerfil().role : '';
+    }
+
+    function esAdmin() {
+      return miRol() == 'admin';
+    }
+
+    // Ficha de médico vinculada a esta cuenta (cadena vacía si no es médico).
+    // Es lo que permite devolver «sólo las citas que me tocan».
+    function miDoctorId() {
+      return tienePerfil() && miPerfil().keys().hasAny(['doctorId'])
+             ? miPerfil().doctorId
+             : '';
+    }
+
+    // Ficha de médico cuyo id se propone en la escritura actual.
+    function fichaPropuesta() {
+      return get(/databases/$(database)/documents/doctors/$(request.resource.data.doctorId)).data;
+    }
+
+    // ¿La ficha propuesta es de verdad mía? Su correo debe coincidir con el del
+    // token y no debe estar ya reclamada por otra cuenta.
+    // Esto es lo que impide que un paciente se declare médico de otro.
+    function fichaPropuestaEsMia() {
+      return fichaPropuesta().email is string
+             && fichaPropuesta().email.lower() == miCorreo()
+             && (!fichaPropuesta().keys().hasAny(['userId'])
+                 || fichaPropuesta().userId == ''
+                 || fichaPropuesta().userId == request.auth.uid);
+    }
+
+    // ═══════════════════ users — rol y datos de cuenta ═══════════════════
+
+    match /users/{uid} {
+
+      // Cada usuario lee su propio documento; el admin lee todos (los necesita
+      // para nombrar médicos).
+      allow read: if (autenticado() && request.auth.uid == uid) || esAdmin();
+
+      // Alta: el documento nace como paciente y sin ficha de médico.
+      allow create: if autenticado()
+                    && request.auth.uid == uid
+                    && request.resource.data.role == 'patient'
+                    && !request.resource.data.keys().hasAny(['doctorId']);
+
+      // El usuario edita su perfil (nombre, correo, foto), pero NO el rol ni el
+      // doctorId. Si esta regla permitiese doctorId, un paciente podría escribir
+      // `doctorId: "doc_ana"` y saltarse la verificación de la ficha de abajo, con
+      // lo que vería la agenda completa de esa médica. Por eso se excluyen los dos.
+      allow update: if autenticado()
+                    && request.auth.uid == uid
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                         .hasAny(['role', 'doctorId']);
+
+      // Excepción controlada: escribir SU PROPIO doctorId, y sólo si la ficha
+      // existe, tiene su correo y no está reclamada por otro. Es el paso que
+      // convierte una cuenta en «médico» al entrar por primera vez.
+      allow update: if autenticado()
+                    && request.auth.uid == uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['doctorId'])
+                    && request.resource.data.doctorId != ''
+                    && fichaPropuestaEsMia();
+
+      // El admin puede cambiar el rol de cualquiera (nombrar médicos).
+      allow update: if esAdmin();
+
+      // Nunca se borra un documento de usuario desde el cliente: se perdería el
+      // rol y la cuenta se quedaría sin permisos para nada.
+      allow delete: if false;
+    }
+
+    // ═══════════════════ doctors — catálogo médico ═══════════════════
+
+    match /doctors/{doctorId} {
+
+      // Cualquier usuario con sesión ve el catálogo: es la pantalla principal del
+      // paciente y el médico necesita leer su propia ficha para vincularse.
+      allow read: if autenticado();
+
+      // Alta de médicos: SÓLO administrador, desde la pantalla «Médicos».
+      allow create: if esAdmin();
+
+      // El admin edita cualquier ficha.
+      allow update: if esAdmin();
+
+      // El médico reclama su ficha: puede escribir ÚNICAMENTE su userId, y sólo
+      // si el correo de la ficha es el suyo y nadie la había reclamado antes.
+      allow update: if autenticado()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['userId'])
+                    && request.resource.data.userId == request.auth.uid
+                    && (!resource.data.keys().hasAny(['userId'])
+                        || resource.data.userId == '')
+                    && resource.data.email is string
+                    && resource.data.email.lower() == miCorreo();
+
+      // El médico mantiene los datos de su propia ficha (bio, tarifa, hospital),
+      // sin poder cambiar el correo con el que se le identifica.
+      allow update: if autenticado()
+                    && resource.data.email is string
+                    && resource.data.email.lower() == miCorreo()
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                         .hasAny(['email']);
+
+      // Borrar un médico deja sus citas huérfanas: sólo el admin, y a sabiendas.
+      allow delete: if esAdmin();
+    }
+
+    // ═══════════════════ specialties — catálogo ═══════════════════
+
+    match /specialties/{specialtyId} {
+      allow read: if autenticado();
+      // Añadir especialidades nuevas es tarea de administración (o de la consola).
+      allow write: if esAdmin();
+    }
+
+    // ═══════════════════ patients — expedientes ═══════════════════
+
+    match /patients/{patientId} {
+
+      // El expediente lo ve su dueño y el administrador.
+      // El médico NO lee expedientes en bloque: para atender la cita ya tiene en
+      // el documento de la cita el nombre, la edad y el motivo.
+      allow read: if autenticado()
+                  && (patientId == request.auth.uid || esAdmin());
+
+      // El id del documento es el uid, así que cada persona tiene un único
+      // expediente y no puede escribir en el de otro.
+      allow create: if autenticado()
+                    && patientId == request.auth.uid
+                    && request.resource.data.fullName is string;
+
+      allow update: if autenticado() && patientId == request.auth.uid;
+
+      allow delete: if esAdmin();
+    }
+
+    // ═══════════════════ appointments — citas ═══════════════════
+
+    match /appointments/{appointmentId} {
+
+      // ── Lectura ──
+      //  · El paciente ve las suyas (ownerId == su uid).
+      //  · El médico ve las que le asignaron (doctorId == su ficha).
+      //  · El administrador ve todas.
+      // Sin esta separación, «Mis Citas» mostraría las citas de todo el mundo, que
+      // es exactamente el fallo corregido en la v5.0.
+      allow read: if autenticado()
+                  && (
+                       resource.data.ownerId == request.auth.uid
+                       || (miDoctorId() != ''
+                           && resource.data.doctorId == miDoctorId())
+                       || esAdmin()
+                     );
+
+      // ── Alta ──
+      // El paciente crea la cita y se etiqueta como dueño. Sin la comprobación de
+      // ownerId alguien podría crear citas a nombre de otra persona y hacerle ver
+      // en su lista una cita que no pidió.
+      allow create: if autenticado()
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.doctorId is string
+                    && request.resource.data.date is string
+                    && request.resource.data.time is string;
+
+      // ── Actualización ──
+      // El paciente cancela la suya. Sólo se permiten estado y motivo: si pudiera
+      // cambiarlo todo, reasignaría la cita a otro médico o falsearía la fecha.
+      allow update: if autenticado()
+                    && resource.data.ownerId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'reason']);
+
+      // El médico actualiza el estado de las citas que le tocan (atendida,
+      // cancelada por el consultorio).
+      allow update: if miDoctorId() != ''
+                    && resource.data.doctorId == miDoctorId()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'reason']);
+
+      allow update: if esAdmin();
+
+      // ── Borrado ──
+      allow delete: if autenticado()
+                    && (
+                         resource.data.ownerId == request.auth.uid
+                         || (miDoctorId() != ''
+                             && resource.data.doctorId == miDoctorId())
+                         || esAdmin()
+                       );
+    }
+
+    // ═══════════════════ todo lo demás ═══════════════════
+
+    // Cualquier colección no declarada queda cerrada. Si mañana se añade una
+    // colección hay que decidir a propósito quién la lee, en lugar de heredar un
+    // permiso abierto por descuido.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
