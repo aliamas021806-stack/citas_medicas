@@ -265,4 +265,64 @@ public class SyncCitasFirestoreTest {
                 com.tuempresa.citasmedicas.domain.repository.IAppointmentRepository.class
                         .isAssignableFrom(FirestoreAppointmentRepository.class));
     }
+
+    // ───────── Cancelar y borrar: la nube debe reflejar lo mismo que el movil ─────────
+
+    @Test
+    public void cancelarActualizaElEstadoEnFirestoreSinPerderCampos() throws Exception {
+        // Regresion real: antes, cancelar una cita solo cambiaba Room. En la consola
+        // de Firebase seguia apareciendo "Confirmed", es decir, la app y la nube
+        // mostraban estados distintos. El PATCH DEBE llevar updateMask para no
+        // reemplazar el documento entero (Firestore borraria los demas campos).
+        String fuente = leerFuente(
+                "app/src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreApi.java",
+                "src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreApi.java");
+
+        assertTrue("Debe existir una operacion de actualizacion parcial (PATCH)",
+                fuente.contains("@PATCH("));
+        assertTrue("La actualizacion debe enviar updateMask.fieldPaths; sin la mascara "
+                        + "Firestore sustituye el documento completo y se pierden campos",
+                fuente.contains("updateMask.fieldPaths"));
+    }
+
+    @Test
+    public void eliminarUnaCitaBorraTambienElDocumentoRemoto() throws Exception {
+        // Antes el borrado remoto solo se registraba en el log: la cita desaparecia
+        // del telefono pero seguia existiendo en Firestore para siempre.
+        String apiFuente = leerFuente(
+                "app/src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreApi.java",
+                "src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreApi.java");
+        String repoFuente = leerFuente(
+                "app/src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreAppointmentRepository.java",
+                "src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreAppointmentRepository.java");
+
+        assertTrue("La API debe exponer DELETE", apiFuente.contains("@DELETE("));
+        assertTrue("El repositorio debe invocar el borrado remoto",
+                repoFuente.contains("deleteDocument("));
+        assertTrue("Cancelar tambien debe propagarse a la nube",
+                repoFuente.contains("marcarCanceladaEnFirestore("));
+    }
+
+    @Test
+    public void unaCitaSinRemoteIdNoIntentaBorrarNadaEnLaNube() throws Exception {
+        // Si la cita se agendo sin internet nunca se subio: no hay documento remoto.
+        // Intentar borrar lanzaria un 404 inutil en cada borrado.
+        String fuente = leerFuente(
+                "app/src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreAppointmentRepository.java",
+                "src/main/java/com/tuempresa/citasmedicas/data/firebase/FirestoreAppointmentRepository.java");
+        assertTrue("Debe comprobarse remoteId antes de borrar en Firestore",
+                fuente.contains("remoteId == null || remoteId.trim().isEmpty()"));
+    }
+
+    /** Lee un fuente Java probando dos rutas relativas (Gradle e IDE). */
+    private static String leerFuente(String... rutas) throws Exception {
+        for (String ruta : rutas) {
+            java.io.File f = new java.io.File(ruta);
+            if (f.isFile()) {
+                return new String(java.nio.file.Files.readAllBytes(f.toPath()),
+                        java.nio.charset.StandardCharsets.UTF_8);
+            }
+        }
+        throw new java.io.IOException("No se encontro el fuente: " + String.join(", ", rutas));
+    }
 }

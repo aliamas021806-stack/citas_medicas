@@ -176,8 +176,8 @@ public class FaseCeroArquitecturaTest {
 
     @Test
     public void elProviderDevuelveImplementacionesUsables() {
-        IDoctorRepository doctores = RepositoryProvider.doctors();
-        IPatientRepository pacientes = RepositoryProvider.patients();
+        IDoctorRepository doctores = RepositoryProvider.doctors(context());
+        IPatientRepository pacientes = RepositoryProvider.patients(context());
         IAuthRepository auth = RepositoryProvider.auth(context());
         IAppointmentRepository citas = RepositoryProvider.appointments(context());
 
@@ -309,7 +309,7 @@ public class FaseCeroArquitecturaTest {
 
     @Test
     public void elCatalogoLlegaPorLaInterfazDeDominio() {
-        IDoctorRepository repo = RepositoryProvider.doctors();
+        IDoctorRepository repo = RepositoryProvider.doctors(context());
         final AtomicReference<List<Specialty>> data = new AtomicReference<>();
         final AtomicReference<String> error = new AtomicReference<>();
 
@@ -334,7 +334,7 @@ public class FaseCeroArquitecturaTest {
 
     @Test
     public void elCatalogoDeDoctoresTambienLlegaSinPedirLaClaseConcreta() {
-        IDoctorRepository repo = RepositoryProvider.doctors();
+        IDoctorRepository repo = RepositoryProvider.doctors(context());
         final AtomicReference<List<Doctor>> data = new AtomicReference<>();
         final AtomicReference<String> error = new AtomicReference<>();
 

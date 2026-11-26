@@ -8,6 +8,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 
+import com.tuempresa.citasmedicas.data.local.AppDatabase;
+import com.tuempresa.citasmedicas.data.local.AppointmentEntity;
 import com.tuempresa.citasmedicas.data.repository.AppointmentRepository;
 import com.tuempresa.citasmedicas.domain.repository.IAppointmentRepository;
 import com.tuempresa.citasmedicas.domain.repository.RepositoryCallback;
@@ -62,7 +64,7 @@ public class FirestoreAppointmentRepository implements IAppointmentRepository {
 
     public FirestoreAppointmentRepository(@NonNull Context context) {
         this.local = new AppointmentRepository(context.getApplicationContext());
-        this.api = FirestoreClient.getApi();
+        this.api = FirestoreClient.getApi(context.getApplicationContext());
     }
 
     // ───────────────────────── Lectura (siempre local) ─────────────────────────
@@ -109,6 +111,8 @@ public class FirestoreAppointmentRepository implements IAppointmentRepository {
             @Override
             public void onSuccess(Void data) {
                 callback.onSuccess(null);
+                // El estado cambia en Room; si hay documento remoto, también en la nube.
+                marcarCanceladaEnFirestore(appointmentId);
             }
 
             @Override
@@ -181,14 +185,102 @@ public class FirestoreAppointmentRepository implements IAppointmentRepository {
         if (appointment == null) {
             return;
         }
-        String remoteId = appointment.getRemoteId();
+        final String remoteId = appointment.getRemoteId();
         if (remoteId == null || remoteId.trim().isEmpty()) {
-            return; // Nunca se subió: no hay nada que borrar en la nube.
+            // Nunca se subió (por ejemplo, se agendó sin internet): nada que borrar.
+            return;
         }
-        // Se deja constancia; el borrado remoto se completa en la Fase 3.1 con
-        // DELETE, que requiere el mismo tratamiento de errores que la creación.
-        android.util.Log.i(TAG, "Cita eliminada en local. Documento remoto '" + remoteId
-                + "' pendiente de borrar en Firestore");
+        api.deleteDocument(FirebaseConfig.COLLECTION_APPOINTMENTS, remoteId)
+                .enqueue(new retrofit2.Callback<Void>() {
+                    @Override
+                    public void onResponse(@NonNull Call<Void> call,
+                                           @NonNull Response<Void> response) {
+                        if (response.isSuccessful()) {
+                            android.util.Log.i(TAG, "Documento remoto '" + remoteId
+                                    + "' borrado de Firestore");
+                        } else {
+                            android.util.Log.w(TAG, "No se pudo borrar el documento remoto '"
+                                    + remoteId + "': "
+                                    + FirebaseErrors.describirErrorFirestore(
+                                    response.code(), FirebaseErrors.cuerpoDeError(response)));
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<Void> call, @NonNull Throwable t) {
+                        android.util.Log.w(TAG, "Sin conexión para borrar el documento '"
+                                + remoteId + "': " + t.getMessage());
+                    }
+                });
+    }
+
+    /**
+     * Refleja la cancelación en Firestore.
+     * <p>
+     * <b>Por qué importa.</b> Sin esto, una cita cancelada seguía apareciendo como
+     * {@code Confirmed} en la consola de Firebase: la app y la nube mostraban estados
+     * distintos, que es exactamente la incoherencia que se quiere evitar al "conectar
+     * la base de datos".
+     * <p>
+     * Se envía un {@code PATCH} con {@code updateMask} para tocar <b>sólo</b> el campo
+     * {@code status}: sin la máscara, Firestore reemplazaría el documento completo y
+     * los demás campos se perderían.
+     */
+    private void marcarCanceladaEnFirestore(@NonNull final String localId) {
+        final long id;
+        try {
+            id = Long.parseLong(localId);
+        } catch (NumberFormatException e) {
+            android.util.Log.w(TAG, "Id local no numérico al cancelar: " + localId);
+            return;
+        }
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            try {
+                final AppointmentEntity entidad = local.getDaoForSync().getById(id);
+                if (entidad == null) {
+                    return;
+                }
+                final String remoteId = entidad.remoteId;
+                if (remoteId == null || remoteId.trim().isEmpty()) {
+                    // La cita nunca llegó a la nube: no hay nada que actualizar.
+                    return;
+                }
+                FirestoreApi.FirestoreDocument parcial = new FirestoreApi.FirestoreDocument();
+                parcial.fields = new HashMap<>();
+                parcial.fields.put("status", FirestoreApi.ofString("Cancelled"));
+
+                api.updateDocument(FirebaseConfig.COLLECTION_APPOINTMENTS, remoteId,
+                                java.util.Collections.singletonList("status"), parcial)
+                        .enqueue(new retrofit2.Callback<FirestoreApi.FirestoreDocument>() {
+                            @Override
+                            public void onResponse(
+                                    @NonNull Call<FirestoreApi.FirestoreDocument> call,
+                                    @NonNull Response<FirestoreApi.FirestoreDocument> response) {
+                                if (response.isSuccessful()) {
+                                    android.util.Log.i(TAG, "Cita remota '" + remoteId
+                                            + "' marcada como Cancelled");
+                                } else {
+                                    android.util.Log.w(TAG, "No se pudo cancelar en Firestore '"
+                                            + remoteId + "': "
+                                            + FirebaseErrors.describirErrorFirestore(
+                                            response.code(),
+                                            FirebaseErrors.cuerpoDeError(response)));
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(
+                                    @NonNull Call<FirestoreApi.FirestoreDocument> call,
+                                    @NonNull Throwable t) {
+                                android.util.Log.w(TAG, "Sin conexión para cancelar '"
+                                        + remoteId + "': " + t.getMessage());
+                            }
+                        });
+            } catch (RuntimeException e) {
+                android.util.Log.w(TAG, "No se pudo leer la cita para cancelar: "
+                        + e.getMessage());
+            }
+        });
     }
 
     /** Persiste en Room el id que asignó Firestore, para no duplicar documentos. */

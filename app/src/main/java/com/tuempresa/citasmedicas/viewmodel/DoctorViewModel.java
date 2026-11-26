@@ -1,8 +1,9 @@
 package com.tuempresa.citasmedicas.viewmodel;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.AndroidViewModel;
 
 import com.tuempresa.citasmedicas.data.RepositoryProvider;
 import com.tuempresa.citasmedicas.domain.UseCase;
@@ -25,11 +26,19 @@ import java.util.Locale;
  * regla de negocio (filtrado por texto, descarte de franjas ocupadas) vive en
  * dominio y aquí solo se traduce el resultado a {@link Resource} para la UI.
  */
-public class DoctorViewModel extends ViewModel {
+public class DoctorViewModel extends AndroidViewModel {
 
-    /** Implementación resuelta por la raíz de composición (hoy mock, mañana Firestore). */
-    private final com.tuempresa.citasmedicas.domain.repository.IDoctorRepository repository =
-            RepositoryProvider.doctors();
+    /**
+     * Implementación resuelta por la raíz de composición (Firestore con respaldo local).
+     * <p>
+     * Se extiende {@link AndroidViewModel} para poder pasar el {@code Context} al
+     * repositorio: es lo que permite enviar el {@code idToken} del usuario en cada
+     * petición a Firestore. Con {@code ViewModel} a secas no había forma de obtenerlo,
+     * y por eso las peticiones viajaban sin credencial, dependiendo de que las reglas
+     * fuesen públicas. La UI no cambia: {@code ViewModelProvider} construye
+     * {@code AndroidViewModel} por sí solo.
+     */
+    private final com.tuempresa.citasmedicas.domain.repository.IDoctorRepository repository;
 
     private final GetSpecialtiesUseCase getSpecialtiesUseCase;
     private final GetDoctorsUseCase getDoctorsUseCase;
@@ -43,7 +52,9 @@ public class DoctorViewModel extends ViewModel {
     /** Último filtro aplicado, para poder re-filtrar sin volver a la red. */
     private String activeQuery = "";
 
-    public DoctorViewModel() {
+    public DoctorViewModel(@NonNull android.app.Application application) {
+        super(application);
+        this.repository = RepositoryProvider.doctors(application.getApplicationContext());
         this.getSpecialtiesUseCase = new GetSpecialtiesUseCase(repository);
         this.getDoctorsUseCase = new GetDoctorsUseCase(repository);
         this.getAvailableSlotsUseCase = new GetAvailableSlotsUseCase(repository);

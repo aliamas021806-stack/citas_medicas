@@ -58,8 +58,23 @@ public class FirebaseAuthRepository implements IAuthRepository {
     private static final String TAG_ERROR_UNAUTHORIZED = "UNAUTHORIZED_DOMAIN";
 
     private final FirebaseAuthApi api;
+    /** Necesario para guardar el idToken con el que Firestore autenticará después. */
+    @Nullable
+    private final android.content.Context context;
 
     public FirebaseAuthRepository() {
+        this(null);
+    }
+
+    /**
+     * @param context contexto de aplicación. Si se pasa, tras un login correcto se
+     *                guarda el {@code idToken} en {@link FirebaseSession}, de modo que
+     *                las peticiones a Firestore viajen ya autenticadas. Si es
+     *                {@code null}, la app sigue funcionando (compatible con pruebas).
+     */
+    public FirebaseAuthRepository(@Nullable android.content.Context context) {
+        this.context = context != null ? context.getApplicationContext() : null;
+
         // Cliente propio: timeouts holgados para redes móviles lentas.
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(20, TimeUnit.SECONDS)
@@ -72,6 +87,23 @@ public class FirebaseAuthRepository implements IAuthRepository {
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
                 .create(FirebaseAuthApi.class);
+    }
+
+    /**
+     * Guarda la sesión de Firebase para que Firestore pueda autenticar.
+     * <p>
+     * <b>Por qué es imprescindible.</b> Firestore y Authentication son servicios
+     * distintos: iniciar sesión en el segundo no hace que el primero sepa quién eres.
+     * El puente es el {@code idToken}, que hay que enviar en cada petición. Si no se
+     * guarda, la app sólo puede leer Firestore con reglas públicas, que es justo lo
+     * que hay que evitar antes de entregar.
+     */
+    private void recordarSesion(@NonNull FirebaseAuthApi.AuthResponse response) {
+        if (context == null) {
+            return;
+        }
+        FirebaseSession.activate(context, response.idToken, response.refreshToken,
+                response.localId);
     }
 
     @Override
@@ -94,6 +126,7 @@ public class FirebaseAuthRepository implements IAuthRepository {
                     public void onResponse(@NonNull retrofit2.Call<FirebaseAuthApi.AuthResponse> call,
                                            @NonNull Response<FirebaseAuthApi.AuthResponse> response) {
                         if (response.isSuccessful() && response.body() != null) {
+                            recordarSesion(response.body());
                             callback.onSuccess(toUser(response.body(), request));
                         } else {
                             // En un HTTP 4xx Retrofit deja body() a null: el JSON del
@@ -132,6 +165,7 @@ public class FirebaseAuthRepository implements IAuthRepository {
                     public void onResponse(@NonNull retrofit2.Call<FirebaseAuthApi.AuthResponse> call,
                                            @NonNull Response<FirebaseAuthApi.AuthResponse> response) {
                         if (response.isSuccessful() && response.body() != null) {
+                            recordarSesion(response.body());
                             callback.onSuccess(toUser(response.body(), request));
                         } else {
                             FirebaseAuthApi.AuthResponse cuerpo =

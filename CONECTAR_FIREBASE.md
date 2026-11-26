@@ -187,6 +187,20 @@ service cloud.firestore {
 > **Cuándo dar ese paso:** al final, justo antes de entregar. Si lo haces ahora, las
 > pruebas sin sesión iniciada dejarán de funcionar y `cargar_colecciones.py` no podrá
 > escribir (va sin credenciales de usuario).
+>
+> **La app ya está preparada para las reglas endurecidas.** Desde la corrección de
+> `AuthHeaderInterceptor`, cada petición a Firestore viaja con
+> `Authorization: Bearer <idToken>` en cuanto has iniciado sesión. Verificado contra el
+> proyecto real: con el token se obtiene `HTTP 200` en `specialties`, `doctors` y al
+> crear una cita. Antes de esa corrección la app funcionaba **sólo** porque las reglas
+> eran públicas: al endurecerlas habría empezado a fallar todo sin ningún error visible.
+>
+> Orden correcto para endurecer:
+> 1. Instala el APK y **crea una cuenta** en la app (así existe un usuario real).
+> 2. Publica las reglas con `if request.auth != null`.
+> 3. Vuelve a abrir la app **con esa sesión iniciada** y comprueba que el catálogo
+>    carga. Si cargara del respaldo local, lo verías en Perfil ("Datos de prueba").
+
 
 ---
 

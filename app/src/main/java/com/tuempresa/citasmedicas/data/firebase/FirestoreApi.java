@@ -10,9 +10,12 @@ import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE;
 import retrofit2.http.GET;
+import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 /**
  * API REST de <b>Cloud Firestore</b> (v1), definida con Retrofit.
@@ -68,6 +71,24 @@ public interface FirestoreApi {
     @POST("./{collection}:runQuery")
     Call<List<QueryResult>> runQuery(@Path("collection") String collection,
                                      @NonNull @Body QueryRequest body);
+
+    /**
+     * Actualiza campos de un documento existente.
+     * <p>
+     * Se usa {@code PATCH} con {@code updateMask} para enviar <b>sólo</b> los campos
+     * que cambian (por ejemplo el estado al cancelar una cita): sin la máscara,
+     * Firestore reemplazaría el documento entero y se perderían los demás campos.
+     */
+    @PATCH("{collection}/{documentId}")
+    Call<FirestoreDocument> updateDocument(@Path("collection") String collection,
+                                           @Path("documentId") String documentId,
+                                           @Query("updateMask.fieldPaths") List<String> updateMask,
+                                           @NonNull @Body FirestoreDocument body);
+
+    /** Borra un documento de Firestore. */
+    @DELETE("{collection}/{documentId}")
+    Call<Void> deleteDocument(@Path("collection") String collection,
+                              @Path("documentId") String documentId);
 
     // ───────────────────────── Modelos de Firestore ─────────────────────────
 

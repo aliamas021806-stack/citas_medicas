@@ -88,8 +88,8 @@ public class FirebaseRestTest {
 
     @Test
     public void elProviderSiempreDevuelveCatalogoUsable() {
-        assertNotNull(RepositoryProvider.doctors());
-        assertNotNull(RepositoryProvider.patients());
+        assertNotNull(RepositoryProvider.doctors(RuntimeEnvironment.getApplication()));
+        assertNotNull(RepositoryProvider.patients(RuntimeEnvironment.getApplication()));
     }
 
     @Test
@@ -102,7 +102,7 @@ public class FirebaseRestTest {
                 RepositoryProvider.auth(RuntimeEnvironment.getApplication())
                         instanceof AuthRepository);
         assertTrue("Sin credenciales debe usarse DoctorRepository (mock)",
-                RepositoryProvider.doctors() instanceof DoctorRepository);
+                RepositoryProvider.doctors(RuntimeEnvironment.getApplication()) instanceof DoctorRepository);
     }
 
     @Test
@@ -116,10 +116,10 @@ public class FirebaseRestTest {
 
         assertFalse("Con credenciales el catálogo no debe ser el mock directo: "
                         + "debe ir envuelto con respaldo local",
-                RepositoryProvider.doctors()
+                RepositoryProvider.doctors(RuntimeEnvironment.getApplication())
                         instanceof com.tuempresa.citasmedicas.data.repository.DoctorRepository);
         assertFalse("Con credenciales los pacientes no deben ser el mock directo",
-                RepositoryProvider.patients()
+                RepositoryProvider.patients(RuntimeEnvironment.getApplication())
                         instanceof com.tuempresa.citasmedicas.data.repository.PatientRepository);
     }
 

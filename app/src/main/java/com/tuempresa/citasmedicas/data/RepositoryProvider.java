@@ -80,7 +80,7 @@ public final class RepositoryProvider {
     @NonNull
     public static IAuthRepository auth(@NonNull Context context) {
         if (FirebaseConfig.isEnabled()) {
-            return FirebaseAuthFallback.wrap(new FirebaseAuthRepository(),
+            return FirebaseAuthFallback.wrap(new FirebaseAuthRepository(context),
                     new AuthRepository());
         }
         return new AuthRepository();
@@ -100,10 +100,11 @@ public final class RepositoryProvider {
      * Perfil, pero la app sigue siendo demostrable.
      */
     @NonNull
-    public static IDoctorRepository doctors() {
+    public static IDoctorRepository doctors(@NonNull Context context) {
         if (FirebaseConfig.isEnabled()) {
+            Context app = context.getApplicationContext();
             return FirestoreFallback.doctors(
-                    new FirestoreDoctorRepository(new DoctorRepository()),
+                    new FirestoreDoctorRepository(new DoctorRepository(), app),
                     new DoctorRepository());
         }
         return new DoctorRepository();
@@ -115,10 +116,10 @@ public final class RepositoryProvider {
      * Igual que el catálogo: Firestore con respaldo local automático.
      */
     @NonNull
-    public static IPatientRepository patients() {
+    public static IPatientRepository patients(@NonNull Context context) {
         if (FirebaseConfig.isEnabled()) {
             return FirestoreFallback.patients(
-                    new FirestorePatientRepository(),
+                    new FirestorePatientRepository(context.getApplicationContext()),
                     new PatientRepository());
         }
         return new PatientRepository();

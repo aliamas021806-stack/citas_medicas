@@ -41,7 +41,28 @@ public class FirestoreDoctorRepository implements IDoctorRepository {
 
     /**
      * @param slotsFallback repositorio que resuelve los horarios disponibles
+     * @param context       contexto de aplicación. Se necesita para que las peticiones
+     *                      viajen con el {@code idToken} del usuario (ver
+     *                      {@code AuthHeaderInterceptor}): sin él, la lectura sólo
+     *                      funcionaría con reglas públicas.
      */
+    public FirestoreDoctorRepository(@NonNull IDoctorRepository slotsFallback,
+                                     @NonNull android.content.Context context) {
+        this.api = FirestoreClient.getApi(context.getApplicationContext());
+        this.slotsFallback = slotsFallback;
+    }
+
+    /**
+     * Constructor sin contexto.
+     * <p>
+     * Crea el cliente sin credenciales de usuario, así que con reglas endurecidas
+     * ({@code if request.auth != null}) las peticiones serán rechazadas. Se conserva
+     * sólo por compatibilidad: el código de producción usa el constructor con
+     * {@code Context}.
+     *
+     * @deprecated usar {@link #FirestoreDoctorRepository(IDoctorRepository, android.content.Context)}
+     */
+    @Deprecated
     public FirestoreDoctorRepository(@NonNull IDoctorRepository slotsFallback) {
         this.api = FirestoreClient.getApi();
         this.slotsFallback = slotsFallback;

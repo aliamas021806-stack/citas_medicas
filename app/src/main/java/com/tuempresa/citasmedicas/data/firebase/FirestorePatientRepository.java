@@ -22,6 +22,23 @@ public class FirestorePatientRepository implements IPatientRepository {
 
     private final FirestoreApi api;
 
+    /**
+     * @param context contexto de aplicación, necesario para enviar el {@code idToken}
+     *                del usuario en las peticiones (ver {@code AuthHeaderInterceptor}).
+     */
+    public FirestorePatientRepository(@NonNull android.content.Context context) {
+        this.api = FirestoreClient.getApi(context.getApplicationContext());
+    }
+
+    /**
+     * Constructor sin contexto.
+     * <p>
+     * No puede leer el token, así que con reglas endurecidas las peticiones serán
+     * rechazadas. Se conserva por compatibilidad.
+     *
+     * @deprecated usar {@link #FirestorePatientRepository(android.content.Context)}
+     */
+    @Deprecated
     public FirestorePatientRepository() {
         this.api = FirestoreClient.getApi();
     }
