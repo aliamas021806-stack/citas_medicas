@@ -60,8 +60,7 @@ public final class FirestoreClient {
      * una reconstrucción a seguir usando un cliente que no autentica.
      */
     @NonNull
-    public static Retrofit getRetrofit(@NonNull Context context) {
-        Retrofit local = retrofit;
+    public static Retrofit getRetrofit(@NonNull Context context) {        Retrofit local = retrofit;
         if (local == null) {
             synchronized (FirestoreClient.class) {
                 local = retrofit;
@@ -146,6 +145,23 @@ public final class FirestoreClient {
             }
         }
         return local;
+    }
+
+    /**
+     * Devuelve el {@link OkHttpClient} <b>de producción</b>, con el interceptor de
+     * credenciales ya instalado.
+     * <p>
+     * Existe para las pruebas de extremo a extremo: permite lanzar una petición real
+     * contra un servidor local y comprobar qué cabeceras salen de verdad. Sin esto,
+     * una prueba podría instanciar el interceptor a mano y pasar en verde aunque
+     * {@link #getApi(Context)} se hubiera quedado sin él (que es exactamente el fallo
+     * que se corrigió).
+     * <p>
+     * No abre ninguna conexión ni toca la red: sólo construye el cliente.
+     */
+    @NonNull
+    public static OkHttpClient clienteRealParaPruebas(@NonNull Context context) {
+        return buildClient(context);
     }
 
     /**

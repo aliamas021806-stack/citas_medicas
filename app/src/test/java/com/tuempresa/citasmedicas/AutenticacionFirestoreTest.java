@@ -315,4 +315,52 @@ public class AutenticacionFirestoreTest {
         }
         throw new IOException("No se encontró el fuente. Probado: " + String.join(", ", rutas));
     }
+
+    // ───────────────── Renovación del token (caducidad a la hora) ─────────────────
+
+    @Test
+    public void sinRefreshTokenNoSePuedeRenovarPeroNoRompe() {
+        // Si sólo hay un idToken caducado y no hay refreshToken, no se inventa nada:
+        // devolver null hace que la petición salga anónima en vez de con basura.
+        FirebaseSession.activate(ctx, jwtConCaducidad(-120), null, "uid_1");
+        assertNull("Sin refreshToken no debe devolverse un token caducado",
+                FirebaseSession.token(ctx));
+        assertTrue("Pero la sesión guardada debe seguir siendo detectable",
+                FirebaseSession.hasStoredSession(ctx));
+    }
+
+    @Test
+    public void hasStoredSessionDistingueCaducadoDeNoHaberIniciado() {
+        // Diagnóstico útil: "nunca inició sesión" y "caducó" son problemas distintos.
+        FirebaseSession.clear(ctx);
+        assertFalse("Sin nada guardado no hay sesión", FirebaseSession.hasStoredSession(ctx));
+
+        FirebaseSession.activate(ctx, jwtConCaducidad(-120), "refresh_abc", "uid_1");
+        assertTrue("Con refreshToken guardado la sesión existe aunque el token caduque",
+                FirebaseSession.hasStoredSession(ctx));
+    }
+
+    @Test
+    public void elTokenVigenteSeDevuelveSinLlamarALaRed() {
+        // Camino rápido: si el token sirve, no hay petición de renovación.
+        String jwt = jwtConCaducidad(3600);
+        FirebaseSession.activate(ctx, jwt, "refresh_abc", "uid_1");
+        assertEquals(jwt, FirebaseSession.token(ctx));
+    }
+
+    @Test
+    public void laRenovacionUsaElEndpointCorrectoDeGoogle() throws IOException {
+        // Regresión: el endpoint de refresh_token es DISTINTO al de signIn
+        // (securetoken vs identitytoolkit). Confundirlos daría 404 en silencio.
+        String fuente = leerFuente(
+                "app/src/main/java/com/tuempresa/citasmedicas/data/firebase/FirebaseSession.java",
+                "src/main/java/com/tuempresa/citasmedicas/data/firebase/FirebaseSession.java");
+
+        assertTrue("Debe usar securetoken.googleapis.com/v1/token",
+                fuente.contains("https://securetoken.googleapis.com/v1/token"));
+        assertTrue("Debe enviar grant_type=refresh_token",
+                fuente.contains("grant_type"));
+        assertTrue("Debe guardar el refreshToken rotado; si no, la sesión se pierde",
+                fuente.contains("nuevoRefresh.isEmpty() ? refresh : nuevoRefresh"));
+    }
 }
