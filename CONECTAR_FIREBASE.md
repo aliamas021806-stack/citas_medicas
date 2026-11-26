@@ -112,6 +112,47 @@ Si no haces esto, verás el error:
 Sin el paso 2 **no hay colecciones que ver** ni datos que guardar: la consola aparece
 vacía porque no existe el contenedor, no porque falten datos.
 
+> **Ojo con el paso 4.** El proveedor de correo/contraseña sólo queda activo cuando la
+> consola muestra la etiqueta **«Habilitado»** en verde junto a
+> «Correo electrónico/contraseña». Si marcaste la casilla y cerraste sin pulsar
+> **Guardar**, Google responde `CONFIGURATION_NOT_FOUND` y las cuentas se quedan en el
+> teléfono en vez de crearse en Firebase.
+
+---
+
+## 🩺 Comprobar los dos pasos de golpe
+
+Un único comando te dice en qué estado está cada cosa, sin que tengas que buscar en la
+consola:
+
+```bash
+python3 tools/verificar_firebase.py
+```
+
+Interpretación de la salida:
+
+| Mensaje del resumen | Significado | Qué hacer |
+|---|---|---|
+| `LISTA` | La base existe y las reglas dejan leer | Nada, ya funciona |
+| `CREADA, pero las reglas la bloquean` | **El paso A está hecho.** Google responde 403 (no 404) | Publicar las reglas del paso 5 |
+| `PENDIENTE` | La base no existe (404) | Hacer el paso 2 |
+
+Para **Authentication** el script distingue tres casos reales:
+
+| Respuesta de Google | Significado |
+|---|---|
+| `CONFIGURATION_NOT_FOUND` | El proveedor **no** está habilitado (falta pulsar Guardar) |
+| `USER_NOT_FOUND` / `INVALID_LOGIN_CREDENTIALS` | El proveedor **sí** está activo (rechaza la prueba porque el usuario no existe, que es lo esperado) |
+| `API_KEY_INVALID` | La clave no pertenece a este proyecto |
+
+El script prueba con un correo inventado a propósito: así sabe si el proveedor está
+activo sin crear cuentas de prueba en tu proyecto.
+
+> **La app no se queda inutilizada si Authentication aún no está activo.** El respaldo
+> `FirebaseAuthFallback` degrada a validación local **sólo** ante problemas de
+> configuración, nunca ante una contraseña incorrecta (eso sería un agujero de
+> seguridad). Puedes hacer la demo mientras terminas de activar el proveedor.
+
 ---
 
 ## 📥 Cargar las colecciones iniciales

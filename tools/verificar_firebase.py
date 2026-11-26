@@ -86,6 +86,78 @@ def listar_documentos(project_id, api_key, coleccion, database_id="(default)"):
     return peticion(url)
 
 
+def comprobar_auth(api_key):
+    """
+    Comprueba si el proveedor Correo/contraseña está habilitado.
+
+    Se llama a signInWithPassword con un usuario que NO existe, a propósito:
+    así distinguimos los dos estados sin crear cuentas basura en el proyecto.
+
+      USER_NOT_FOUND        -> el proveedor SÍ está activo (rechaza por usuario)
+      INVALID_LOGIN_CREDENTIALS -> el proveedor SÍ está activo (rechaza por clave)
+      CONFIGURATION_NOT_FOUND   -> el proveedor NO está habilitado
+      API_KEY_INVALID           -> la clave no es de este proyecto
+    """
+    url = ("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword"
+           "?key=" + api_key)
+    cuerpo = {
+        "email": "comprobacion.estado@example.invalid",
+        "password": "SoloComprobar1234",
+        "returnSecureToken": True,
+    }
+    return peticion(url, cuerpo=cuerpo)
+
+
+def explicar_auth(codigo, cuerpo, project_id=""):
+    """Devuelve (esta_habilitado, texto_explicativo)."""
+    texto = json.dumps(cuerpo) if not isinstance(cuerpo, str) else cuerpo
+    minus = texto.lower()
+
+    if codigo == 0:
+        return False, "Sin conexión: no se pudo comprobar Authentication."
+
+    if "configuration_not_found" in minus:
+        enlace = ("https://console.firebase.google.com/project/" + project_id
+                  + "/authentication") if project_id else \
+                 "https://console.firebase.google.com/"
+        return False, (
+            "Authentication NO está activo para Correo/contraseña.\n"
+            "     Google responde CONFIGURATION_NOT_FOUND tanto al iniciar sesión\n"
+            "     como al registrar, así que el proveedor sigue deshabilitado.\n"
+            "     Solución exacta (1 minuto):\n"
+            "       1. " + enlace + "\n"
+            "       2. Pestaña 'Sign-in method' / 'Métodos de acceso'\n"
+            "       3. 'Correo electrónico/contraseña' -> Habilitar -> GUARDAR\n"
+            "     Ojo: si sólo marcaste la casilla y no pulsaste 'Guardar',\n"
+            "     el cambio no se aplica. Verás 'Habilitado' en verde cuando sí."
+        )
+
+    if "api key not valid" in minus or "api_key_invalid" in minus:
+        return False, "La API Key no es válida para este proyecto."
+
+    if "user_not_found" in minus or "invalid_login_credentials" in minus \
+            or "email_not_found" in minus or "invalid_password" in minus:
+        return True, (
+            "Authentication SÍ está activo para Correo/contraseña.\n"
+            "     Google ha rechazado la prueba porque el usuario no existe,\n"
+            "     que es justo lo que esperábamos. Todo correcto."
+        )
+
+    if "admin_only_operation" in minus:
+        return False, ("El registro con correo/contraseña está desactivado.\n"
+                       "     Revisa Authentication → Sign-in method → Correo electrónico.")
+
+    if "unauthorized_domain" in minus:
+        return True, ("El proveedor está activo, pero el dominio no está autorizado\n"
+                      "     (sólo afecta a login con redes sociales, no a correo).")
+
+    return False, "Respuesta inesperada al comprobar Authentication."
+
+
+def proyecto_para_enlace(project_id):
+    return project_id
+
+
 # ─────────────────────────── interpretación de errores ───────────────────────────
 
 def explicar(codigo, cuerpo):
@@ -220,54 +292,113 @@ def main():
     print(f"Base datos : {database_id}")
 
     # 1) ¿Responde la base de datos?
-    print("\n[1/2] Consultando la base de datos...")
+    print("\n" + "-" * 66)
+    print(" PASO A — Base de datos Firestore")
+    print("-" * 66)
+    print(f"Consultando la base de datos...")
     codigo, cuerpo = listar_colecciones(project_id, api_key, database_id)
 
-    if codigo != 200:
+    colecciones = []
+    firestore_ok = (codigo == 200)
+
+    # La base puede estar creada pero bloqueada por las reglas. Es un estado
+    # distinto de "no existe" y hay que reflejarlo, porque el paso A del
+    # usuario estaría hecho y aun así el script no podría leer nada.
+    texto_firestore = json.dumps(cuerpo) if not isinstance(cuerpo, str) else cuerpo
+    minus_firestore = texto_firestore.lower()
+    base_creada = firestore_ok or ("missing or insufficient permissions" in minus_firestore)
+    bloqueada_por_reglas = (not firestore_ok) and base_creada
+
+    if codigo == 200:
+        colecciones = cuerpo.get("collectionIds", []) if isinstance(cuerpo, dict) else []
+        print(f"  HTTP 200  ->  la base de datos EXISTE y responde")
+        print(f"  Colecciones encontradas: {len(colecciones)}")
+        if not colecciones:
+            print("\n  La base está vacía (no tiene colecciones todavía).")
+            print("  Lo que necesita la app:")
+            for nombre in ("specialties", "doctors", "patients", "appointments"):
+                print(f"    - {nombre}")
+    else:
         print(f"  HTTP {codigo}")
         print("\n  " + explicar(codigo, cuerpo))
         print("\n  Detalle técnico:")
         detalle = json.dumps(cuerpo, indent=2, ensure_ascii=False)
         for linea in detalle.splitlines()[:14]:
             print("   ", linea)
-        return 1
 
-    colecciones = cuerpo.get("collectionIds", []) if isinstance(cuerpo, dict) else []
-    print(f"  HTTP 200  →  la base de datos EXISTE y responde")
-    print(f"  Colecciones encontradas: {len(colecciones)}")
+    # 2) ¿Está activo el inicio de sesión con correo?
+    print("\n" + "-" * 66)
+    print(" PASO B — Authentication (correo y contraseña)")
+    print("-" * 66)
+    print("Comprobando el proveedor de correo/contraseña...")
+    codigo_auth, cuerpo_auth = comprobar_auth(api_key)
+    auth_ok, texto_auth = explicar_auth(codigo_auth, cuerpo_auth, project_id)
+    print("\n  " + texto_auth)
+    if not auth_ok:
+        print("\n  Detalle técnico:")
+        detalle = json.dumps(cuerpo_auth, indent=2, ensure_ascii=False)
+        for linea in detalle.splitlines()[:14]:
+            print("   ", linea)
 
-    if not colecciones:
-        print("\n  La base está vacía (no tiene colecciones todavía).")
-        print("  Lo que necesita la app:")
-        for nombre in ("specialties", "doctors", "patients", "appointments"):
-            print(f"    - {nombre}")
-        print("\n  Dime esto y te genero el script de carga con datos de ejemplo.")
-        return 0
+    # 3) Resumen accionable
+    print("\n" + "=" * 66)
+    print(" RESUMEN")
+    print("=" * 66)
+    print(f"  Paso A  Base de datos Firestore : "
+          + ("LISTA" if firestore_ok
+             else ("CREADA, pero las reglas la bloquean"
+                   if bloqueada_por_reglas else "PENDIENTE")))
+    print(f"  Paso B  Authentication          : "
+          + ("LISTO" if auth_ok else "PENDIENTE"))
 
-    # 2) Campos reales de cada colección
-    print("\n[2/2] Leyendo los campos reales de cada colección...\n")
-    for coleccion in colecciones:
-        codigo_doc, cuerpo_doc = listar_documentos(project_id, api_key, coleccion,
+    if firestore_ok and colecciones:
+        print("\n[2/2] Leyendo los campos reales de cada colección...\n")
+        for coleccion in colecciones:
+            codigo_doc, cuerpo_doc = listar_documentos(project_id, api_key, coleccion,
                                                        database_id)
-        if codigo_doc != 200:
-            print(f"  {coleccion}: HTTP {codigo_doc} (no se pudo leer)")
-            continue
-        documentos = cuerpo_doc.get("documents", []) if isinstance(cuerpo_doc, dict) else []
-        print(f"  {coleccion}  ({len(documentos)} documento(s) de muestra)")
-        if not documentos:
-            print("      (colección vacía)")
-            continue
-        tipos = resumir_documento(documentos[0])
-        for campo, tipo in tipos.items():
-            print(f"      {campo:<22} {tipo}")
-        print()
+            if codigo_doc != 200:
+                print(f"  {coleccion}: HTTP {codigo_doc} (no se pudo leer)")
+                continue
+            documentos = (cuerpo_doc.get("documents", [])
+                          if isinstance(cuerpo_doc, dict) else [])
+            print(f"  {coleccion}  ({len(documentos)} documento(s) de muestra)")
+            if not documentos:
+                print("      (colección vacía)")
+                continue
+            tipos = resumir_documento(documentos[0])
+            for campo, tipo in tipos.items():
+                print(f"      {campo:<22} {tipo}")
+            print()
+
+    if bloqueada_por_reglas:
+        print("\n  El paso A está HECHO: la base existe (por eso Google responde")
+        print("  403 y no 404). Lo único que falta es publicar las reglas.")
+        print("\n  Firestore -> Reglas -> pega esto -> Publicar:")
+        print("      rules_version = '2';")
+        print("      service cloud.firestore {")
+        print("        match /databases/{database}/documents {")
+        print("          match /{document=**} {")
+        print("            allow read, write: if true;")
+        print("          }")
+        print("        }")
+        print("      }")
+        print("\n  Después:")
+        print("    python3 tools/cargar_colecciones.py")
+    elif not firestore_ok:
+        print("\n  Falta crear la base de datos de Firestore (paso A).")
+    elif not colecciones:
+        print("\n  Ya puedes cargar los datos iniciales:")
+        print("    python3 tools/cargar_colecciones.py")
+    else:
+        print("\n  Todo listo. La app puede leer y escribir en Firestore.")
+
+    if not auth_ok:
+        print("\n  Nota: la app sigue funcionando en modo local gracias al respaldo")
+        print("  (FirebaseAuthFallback). El proveedor de correo sólo hace falta para")
+        print("  que las cuentas se creen en Firebase en lugar de en el teléfono.")
 
     print("=" * 66)
-    print(" Ya tengo lo que necesito.")
-    print(" Pégame esta salida y ajusto el mapeo (FirestoreMapper) a tus campos")
-    print(" reales, sin tocar Room ni la UI.")
-    print("=" * 66)
-    return 0
+    return 0 if (firestore_ok and auth_ok) else 1
 
 
 if __name__ == "__main__":
