@@ -73,6 +73,14 @@ def peticion(url, cuerpo=None):
 
 
 def listar_colecciones(project_id, api_key, database_id="(default)"):
+    """
+    Operación ADMINISTRATIVA.
+
+    Ojo: listCollectionIds exige permisos de propietario y NO pasa por las
+    Reglas de Firestore. Por eso devuelve 403 aunque las reglas estén bien
+    puestas, y no sirve para saber si la app puede leer. Se usa sólo como
+    pista secundaria.
+    """
     url = ("https://firestore.googleapis.com/v1/projects/" + project_id
            + "/databases/" + database_id
            + "/documents:listCollectionIds?key=" + api_key)
@@ -80,10 +88,38 @@ def listar_colecciones(project_id, api_key, database_id="(default)"):
 
 
 def listar_documentos(project_id, api_key, coleccion, database_id="(default)"):
+    """
+    Lectura normal de una colección. ESTA sí respeta las Reglas de Firestore,
+    así que es la que dice la verdad sobre si la app podrá leer los datos.
+    """
     url = ("https://firestore.googleapis.com/v1/projects/" + project_id
            + "/databases/" + database_id + "/documents/" + coleccion
            + "?key=" + api_key + "&pageSize=3")
     return peticion(url)
+
+
+def comprobar_lectura(project_id, api_key, database_id="(default)"):
+    """
+    Comprueba si las REGLAS dejan leer, que es lo que de verdad importa.
+
+    Devuelve (codigo, colecciones_que_responden, fallo_representativo).
+    Se prueba el catálogo real de la app; si ninguna colección responde, se
+    devuelve el primer error para poder explicarlo.
+    """
+    colecciones = ["specialties", "doctors", "patients", "appointments"]
+    disponibles = []
+    primer_fallo = None
+    for coleccion in colecciones:
+        codigo, cuerpo = listar_documentos(project_id, api_key, coleccion, database_id)
+        if codigo == 200:
+            disponibles.append(coleccion)
+        elif primer_fallo is None:
+            primer_fallo = (codigo, cuerpo)
+    if disponibles:
+        return 200, disponibles, None
+    if primer_fallo is None:
+        return 0, [], "Sin respuesta"
+    return primer_fallo[0], [], primer_fallo[1]
 
 
 def comprobar_auth(api_key):
@@ -291,38 +327,30 @@ def main():
     print(f"API Key    : {api_key[:8]}...{api_key[-4:]} ({len(api_key)} caracteres)")
     print(f"Base datos : {database_id}")
 
-    # 1) ¿Responde la base de datos?
+    # 1) ¿Responden las colecciones de la app? (esto SÍ respeta las reglas)
     print("\n" + "-" * 66)
     print(" PASO A — Base de datos Firestore")
     print("-" * 66)
-    print(f"Consultando la base de datos...")
-    codigo, cuerpo = listar_colecciones(project_id, api_key, database_id)
-
-    colecciones = []
+    print("Leyendo las colecciones reales de la app...")
+    codigo, colecciones, fallo = comprobar_lectura(project_id, api_key, database_id)
     firestore_ok = (codigo == 200)
 
-    # La base puede estar creada pero bloqueada por las reglas. Es un estado
-    # distinto de "no existe" y hay que reflejarlo, porque el paso A del
-    # usuario estaría hecho y aun así el script no podría leer nada.
-    texto_firestore = json.dumps(cuerpo) if not isinstance(cuerpo, str) else cuerpo
-    minus_firestore = texto_firestore.lower()
-    base_creada = firestore_ok or ("missing or insufficient permissions" in minus_firestore)
-    bloqueada_por_reglas = (not firestore_ok) and base_creada
+    # Pista secundaria: listCollectionIds es administrativa y NO pasa por las
+    # reglas, así que su 403 no significa que la app no pueda leer.
+    codigo_admin, cuerpo_admin = listar_colecciones(project_id, api_key, database_id)
+    texto_admin = json.dumps(cuerpo_admin) if not isinstance(cuerpo_admin, str) else cuerpo_admin
+    minus_admin = texto_admin.lower()
+    base_creada = (firestore_ok or codigo_admin == 200
+                   or "missing or insufficient permissions" in minus_admin)
 
-    if codigo == 200:
-        colecciones = cuerpo.get("collectionIds", []) if isinstance(cuerpo, dict) else []
-        print(f"  HTTP 200  ->  la base de datos EXISTE y responde")
-        print(f"  Colecciones encontradas: {len(colecciones)}")
-        if not colecciones:
-            print("\n  La base está vacía (no tiene colecciones todavía).")
-            print("  Lo que necesita la app:")
-            for nombre in ("specialties", "doctors", "patients", "appointments"):
-                print(f"    - {nombre}")
+    if firestore_ok:
+        print(f"  HTTP 200  ->  las reglas PERMITEN leer y escribir")
+        print(f"  Colecciones que responden: {', '.join(colecciones)}")
     else:
         print(f"  HTTP {codigo}")
-        print("\n  " + explicar(codigo, cuerpo))
+        print("\n  " + explicar(codigo, fallo))
         print("\n  Detalle técnico:")
-        detalle = json.dumps(cuerpo, indent=2, ensure_ascii=False)
+        detalle = json.dumps(fallo, indent=2, ensure_ascii=False)
         for linea in detalle.splitlines()[:14]:
             print("   ", linea)
 
@@ -345,13 +373,14 @@ def main():
     print(" RESUMEN")
     print("=" * 66)
     print(f"  Paso A  Base de datos Firestore : "
-          + ("LISTA" if firestore_ok
+          + ("LISTA (las reglas permiten leer y escribir)" if firestore_ok
              else ("CREADA, pero las reglas la bloquean"
-                   if bloqueada_por_reglas else "PENDIENTE")))
+                   if base_creada else "PENDIENTE")))
     print(f"  Paso B  Authentication          : "
           + ("LISTO" if auth_ok else "PENDIENTE"))
 
-    if firestore_ok and colecciones:
+    # 4) Campos reales de las colecciones que responden
+    if firestore_ok:
         print("\n[2/2] Leyendo los campos reales de cada colección...\n")
         for coleccion in colecciones:
             codigo_doc, cuerpo_doc = listar_documentos(project_id, api_key, coleccion,
@@ -370,10 +399,28 @@ def main():
                 print(f"      {campo:<22} {tipo}")
             print()
 
-    if bloqueada_por_reglas:
-        print("\n  El paso A está HECHO: la base existe (por eso Google responde")
-        print("  403 y no 404). Lo único que falta es publicar las reglas.")
-        print("\n  Firestore -> Reglas -> pega esto -> Publicar:")
+    # 5) Qué falta exactamente
+    vacias = []
+    if firestore_ok:
+        for coleccion in ("specialties", "doctors", "patients"):
+            if coleccion in colecciones:
+                codigo_doc, cuerpo_doc = listar_documentos(project_id, api_key,
+                                                           coleccion, database_id)
+                documentos = (cuerpo_doc.get("documents", [])
+                              if isinstance(cuerpo_doc, dict) else [])
+                if not documentos:
+                    vacias.append(coleccion)
+        if vacias:
+            print("\n  Colecciones sin datos todavía: " + ", ".join(vacias))
+            print("  Cárgalas con:")
+            print("    python3 tools/cargar_colecciones.py")
+        else:
+            print("\n  Todo listo. La app puede leer y escribir en Firestore.")
+            print("  Prueba definitiva: agenda una cita en la app y aparecerá en")
+            print("  la colección 'appointments'.")
+    elif base_creada:
+        print("\n  La base EXISTE (por eso Google no da 404). Falta que las reglas")
+        print("  dejen pasar las peticiones. Firestore -> Reglas -> Publicar:")
         print("      rules_version = '2';")
         print("      service cloud.firestore {")
         print("        match /databases/{database}/documents {")
@@ -382,20 +429,19 @@ def main():
         print("          }")
         print("        }")
         print("      }")
-        print("\n  Después:")
-        print("    python3 tools/cargar_colecciones.py")
-    elif not firestore_ok:
-        print("\n  Falta crear la base de datos de Firestore (paso A).")
-    elif not colecciones:
-        print("\n  Ya puedes cargar los datos iniciales:")
-        print("    python3 tools/cargar_colecciones.py")
+        print("\n  Si ya las publicaste, espera 1 minuto: tardan en propagarse.")
     else:
-        print("\n  Todo listo. La app puede leer y escribir en Firestore.")
+        print("\n  Falta crear la base de datos de Firestore (paso A).")
 
     if not auth_ok:
         print("\n  Nota: la app sigue funcionando en modo local gracias al respaldo")
         print("  (FirebaseAuthFallback). El proveedor de correo sólo hace falta para")
         print("  que las cuentas se creen en Firebase en lugar de en el teléfono.")
+
+    print("\n  Aviso sobre el banner rojo de la consola: es NORMAL mientras uses")
+    print("  'allow read, write: if true'. No es un error, es un recordatorio de")
+    print("  que esas reglas son abiertas. Antes de entregar se cambian a")
+    print("  'if request.auth != null' y el banner desaparece.")
 
     print("=" * 66)
     return 0 if (firestore_ok and auth_ok) else 1

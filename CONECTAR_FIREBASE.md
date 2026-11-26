@@ -133,9 +133,16 @@ Interpretación de la salida:
 
 | Mensaje del resumen | Significado | Qué hacer |
 |---|---|---|
-| `LISTA` | La base existe y las reglas dejan leer | Nada, ya funciona |
-| `CREADA, pero las reglas la bloquean` | **El paso A está hecho.** Google responde 403 (no 404) | Publicar las reglas del paso 5 |
+| `LISTA (las reglas permiten leer y escribir)` | Todo correcto | Nada |
+| `CREADA, pero las reglas la bloquean` | **El paso A está hecho.** Google no da 404 | Publicar las reglas del paso 5 |
 | `PENDIENTE` | La base no existe (404) | Hacer el paso 2 |
+
+> **Por qué el script lee colecciones reales y no `listCollectionIds`.** Ese método es
+> una operación *administrativa*: exige permisos de propietario y **no pasa por las
+> Reglas de Firestore**. Por eso devuelve `403` aunque las reglas estén perfectamente
+> publicadas, y usarlo para diagnosticar daba un falso negativo. Ahora se prueba
+> `specialties`, `doctors`, `patients` y `appointments`, que sí respetan las reglas y
+> son exactamente lo que leerá la app.
 
 Para **Authentication** el script distingue tres casos reales:
 
@@ -152,6 +159,58 @@ activo sin crear cuentas de prueba en tu proyecto.
 > `FirebaseAuthFallback` degrada a validación local **sólo** ante problemas de
 > configuración, nunca ante una contraseña incorrecta (eso sería un agujero de
 > seguridad). Puedes hacer la demo mientras terminas de activar el proveedor.
+
+---
+
+## ⚠️ El aviso rojo de «tus reglas son públicas» es normal
+
+Cuando publicas `allow read, write: if true;`, la consola muestra un banner rojo:
+
+> ⚠️ Tus reglas de seguridad están definidas como públicas, por lo que cualquiera
+> puede robar, modificar o borrar información de tu base de datos
+
+**No es un error ni impide que funcione: es un recordatorio.** Significa exactamente lo
+que dice, y es cierto: esas reglas dejan pasar a cualquiera. Sirven para desarrollar y
+hacer la demo. El banner desaparece solo en cuanto cambias a:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
+
+> **Cuándo dar ese paso:** al final, justo antes de entregar. Si lo haces ahora, las
+> pruebas sin sesión iniciada dejarán de funcionar y `cargar_colecciones.py` no podrá
+> escribir (va sin credenciales de usuario).
+
+---
+
+## 🚀 Que el APK de GitHub Actions salga conectado
+
+`local.properties` está en `.gitignore`, así que **GitHub Actions no lo tiene**. Sin
+nada más, el APK que genera el workflow arrancaría en modo local y las citas no
+llegarían a Firestore.
+
+Para evitarlo, las credenciales están versionadas en **`firebase.properties`** (en la
+raíz del proyecto). `app/build.gradle` las lee en este orden, la primera que exista gana:
+
+1. Variable de entorno `FIREBASE_*` (útil para CI o para no tocar ficheros)
+2. `local.properties` (tu copia local, ignorada por git)
+3. `firebase.properties` (valor por defecto versionado)
+
+Así el APK descargado de **Actions → Artifacts → `app-release-apk`** ya viene con
+`FIREBASE_ENABLED = true`, sin configurar nada.
+
+> **¿Es seguro versionar la API Key?** Sí. La API Key de Firebase es una clave
+> *pública de cliente*: identifica el proyecto ante Google, no autoriza el acceso. Es el
+> mismo dato que viaja en claro dentro de cualquier APK publicado en Play Store. La
+> seguridad real la imponen las **Reglas de Firestore** en el servidor. Ese fichero no
+> contiene contraseñas, tokens privados ni claves de cuenta de servicio.
 
 ---
 

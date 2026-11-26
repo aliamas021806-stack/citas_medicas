@@ -82,16 +82,30 @@ android {
     }
 
     // ── Configuración de Firebase ────────────────────────────────────────────
-    // Las credenciales se leen de local.properties (ignorado por git) para no
-    // subir nunca claves al repositorio. Si faltan, la app arranca en MODO MOCK:
-    // exactamente igual que hoy. Así el proyecto compila en CI y para el profesor
-    // sin necesidad de configurar nada.
-    def firebasePropsFile = rootProject.file("local.properties")
+    // Prioridad de las credenciales (la primera que exista gana):
+    //
+    //   1. Variable de entorno  -> útil para CI y para no tocar ficheros.
+    //   2. local.properties     -> cada desarrollador, ignorado por git.
+    //   3. firebase.properties  -> VERSIONADO en el repo.
+    //
+    // El punto 3 es imprescindible: GitHub Actions no tiene local.properties
+    // (está en .gitignore), así que sin él el APK compilado en CI saldría en
+    // MODO MOCK: funcionaría, pero las citas no llegarían a Firestore. Con
+    // firebase.properties el APK descargado de Actions ya viene conectado.
+    //
+    // Nota de seguridad: la API Key de Firebase es una clave pública de
+    // cliente; su función es IDENTIFICAR el proyecto, no autorizar el acceso.
+    // La seguridad real la dan las Reglas de Firestore del servidor.
     def firebaseProps = new Properties()
+    def firebasePropsFile = rootProject.file("firebase.properties")
     if (firebasePropsFile.exists()) {
         firebasePropsFile.withInputStream { firebaseProps.load(it) }
     }
-    // Valor efectivo: variable de entorno > local.properties > vacío
+    def localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) {
+        localPropsFile.withInputStream { firebaseProps.load(it) }
+    }
+    // Valor efectivo: variable de entorno > local.properties > firebase.properties
     def fbApiKey    = System.getenv("FIREBASE_API_KEY")     ?: firebaseProps.getProperty("FIREBASE_API_KEY", "")
     def fbProjectId = System.getenv("FIREBASE_PROJECT_ID")  ?: firebaseProps.getProperty("FIREBASE_PROJECT_ID", "")
     def fbAppId     = System.getenv("FIREBASE_APP_ID")      ?: firebaseProps.getProperty("FIREBASE_APP_ID", "")
