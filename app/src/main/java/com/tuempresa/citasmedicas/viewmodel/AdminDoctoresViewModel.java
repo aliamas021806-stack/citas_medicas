@@ -37,6 +37,18 @@ public class AdminDoctoresViewModel extends AndroidViewModel {
      * médico aparece al filtrar por su especialidad.
      */
     private final MutableLiveData<List<String>> especialidades = new MutableLiveData<>();
+    /**
+     * Catálogo real de especialidades (id + nombre).
+     * <p>
+     * <b>Por qué se guarda entero y no sólo los nombres.</b> El {@code specialtyId} de
+     * la ficha tiene que ser el id que existe en {@code specialties} (por ejemplo
+     * {@code esp_06}), no uno derivado del texto. Derivándolo se escribía
+     * {@code specialtyId: "podologia"} y esa especialidad no existía en la base de
+     * datos, así que el médico no aparecía al filtrar por ella. Con la lista real
+     * delante, el id se toma del catálogo y siempre coincide.
+     */
+    private final java.util.List<com.tuempresa.citasmedicas.model.Specialty> catalogoReal =
+            new java.util.ArrayList<>();
 
     public AdminDoctoresViewModel(@NonNull Application application) {
         super(application);
@@ -87,11 +99,13 @@ public class AdminDoctoresViewModel extends AndroidViewModel {
             @Override
             public void onSuccess(List<com.tuempresa.citasmedicas.model.Specialty> data) {
                 java.util.List<String> nombres = new java.util.ArrayList<>();
+                catalogoReal.clear();
                 if (data != null) {
                     for (com.tuempresa.citasmedicas.model.Specialty s : data) {
                         if (s != null && s.getName() != null
                                 && !s.getName().trim().isEmpty()) {
                             nombres.add(s.getName().trim());
+                            catalogoReal.add(s);
                         }
                     }
                 }
@@ -119,9 +133,10 @@ public class AdminDoctoresViewModel extends AndroidViewModel {
         Doctor doctor = new Doctor();
         doctor.setFullName(fullName.trim());
         doctor.setSpecialtyName(specialtyName.trim());
-        // El id de especialidad se deriva del nombre: el catálogo de especialidades ya
-        // existente usa ids cortos y así la ficha aparece filtrada correctamente.
-        doctor.setSpecialtyId(especialidadIdDesde(specialtyName));
+        // El id sale del catálogo real si esa especialidad existe; si no (catálogo
+        // vacío porque falló la red, o nombre nuevo escrito a mano), se deriva del
+        // nombre como último recurso para no bloquear el alta.
+        doctor.setSpecialtyId(idDeEspecialidad(specialtyName));
         doctor.setHospital(hospital.trim());
         doctor.setAge(age);
         doctor.setYearsExperience(yearsExperience);
@@ -143,6 +158,40 @@ public class AdminDoctoresViewModel extends AndroidViewModel {
                 alta.setValue(Resource.error(mensaje));
             }
         });
+    }
+
+    /**
+     * Id real de la especialidad para la ficha del médico.
+     * <p>
+     * <b>Primero el catálogo, después el nombre.</b> Si la especialidad existe en
+     * {@code specialties} se usa <i>su</i> id ({@code esp_06}), porque es el que
+     * consulta el filtro del catálogo: con un id inventado el médico no aparecía al
+     * buscar por su especialidad. Sólo si no está en el catálogo se deriva del nombre,
+     * que es el caso de una especialidad nueva escrita a mano o de un catálogo que no
+     * se pudo cargar (sin red).
+     */
+    @NonNull
+    public String idDeEspecialidad(@NonNull String nombre) {
+        String buscado = normalizarParaComparar(nombre);
+        for (com.tuempresa.citasmedicas.model.Specialty s : catalogoReal) {
+            if (s == null || s.getId() == null || s.getName() == null) {
+                continue;
+            }
+            if (normalizarParaComparar(s.getName()).equals(buscado)
+                    || s.getId().equalsIgnoreCase(nombre.trim())) {
+                return s.getId();
+            }
+        }
+        return especialidadIdDesde(nombre);
+    }
+
+    /** Minúsculas y sin tildes, para comparar "Pediatría" con "pediatria". */
+    @NonNull
+    private static String normalizarParaComparar(@NonNull String texto) {
+        String sinTildes = java.text.Normalizer
+                .normalize(texto.trim(), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        return sinTildes.toLowerCase(java.util.Locale.ROOT).replaceAll("\\s+", " ");
     }
 
     /**

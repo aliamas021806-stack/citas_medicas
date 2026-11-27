@@ -3,6 +3,8 @@ package com.tuempresa.citasmedicas.util;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import androidx.annotation.Nullable;
+
 import com.tuempresa.citasmedicas.model.User;
 import com.tuempresa.citasmedicas.model.UserRole;
 
@@ -79,6 +81,44 @@ public class SessionManager {
     /** Rol del usuario en sesión. Sin sesión o sin dato, {@link UserRole#PATIENT}. */
     public UserRole getRole() {
         return UserRole.fromValue(prefs.getString(KEY_ROLE, UserRole.PATIENT.getValue()));
+    }
+
+    /**
+     * Copia a la sesión los datos de la <b>ficha del médico</b>.
+     * <p>
+     * <b>El problema que resuelve.</b> Firebase Authentication no devuelve el nombre ni
+     * la edad: al iniciar sesión sólo llega el correo. La sesión se quedaba con un
+     * nombre derivado del correo («medico.demo01» → «Medico Demo01»), la edad en 0 y el
+     * teléfono vacío, aunque la ficha tuviera «Ana Suárez», 35 años y su consultorio.
+     * Con esto, la sesión refleja la ficha y el perfil muestra la verdad.
+     * <p>
+     * No se toca la contraseña ni nada de Firebase: sólo los datos de presentación.
+     */
+    public void aplicarFichaDeMedico(@Nullable String fullName, int age, @Nullable String phone) {
+        SharedPreferences.Editor editor = prefs.edit();
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            // El nombre de la ficha llega completo; se guarda como nombre y se vacía el
+            // apellido para que `getFullName()` no lo duplique.
+            editor.putString(KEY_NAME, fullName.trim());
+            editor.putString(KEY_LAST_NAME, "");
+        }
+        if (age > 0) {
+            editor.putInt(KEY_AGE, age);
+        }
+        if (phone != null && !phone.trim().isEmpty()) {
+            editor.putString(KEY_PHONE, phone.trim());
+        }
+        editor.apply();
+    }
+
+    /** ¿Ya hay un teléfono guardado para esta cuenta? */
+    public boolean hasPhone() {
+        return !isBlank(prefs.getString(KEY_PHONE, ""));
+    }
+
+    /** Guarda sólo el teléfono (lo usa el médico al completar su ficha). */
+    public void actualizarTelefono(@Nullable String phone) {
+        prefs.edit().putString(KEY_PHONE, phone != null ? phone : "").apply();
     }
 
     /** Id del médico vinculado a esta cuenta (vacío si no lo es). */

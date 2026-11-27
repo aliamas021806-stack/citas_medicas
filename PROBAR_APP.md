@@ -12,14 +12,16 @@ necesidad de Android Studio, sin emulador y sin conocimientos técnicos.
 
 **Descarga directa (no hace falta cuenta de GitHub):**
 
-### 👉 [Descargar CitasMedicas-v6.1.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.1/CitasMedicas-v6.1.apk)
+### 👉 [Descargar CitasMedicas-v6.2.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.2/CitasMedicas-v6.2.apk)
 
 - Tamaño: **5.5 MB** (5 727 949 bytes)
-- Versión: **6.1** (versionCode 7)
+- Versión: **6.2** (versionCode 8)
 - Requisito: **Android 7.0 o superior** (API 24+)
 - Firmado con certificado de release ✅
 
-> 🆕 **Esta es la v6.1.** Trae dos novedades sobre la v6.0:
+> 🆕 **Esta es la v6.2.** Corrige cinco fallos reportados con datos reales y añade la
+> ficha profesional del médico. Detalle completo en el [README](README.md#-qué-arregla-la-v62).
+> Las novedades de la v6.1 siguen aquí:
 >
 > 1. **La agenda del médico separa lo que falta de lo atendido**, con botones
 >    «Marcar como atendida» y «El paciente no acudió».
@@ -30,11 +32,11 @@ necesidad de Android Studio, sin emulador y sin conocimientos técnicos.
 > ve Doctores · Mis Citas · Perfil.
 
 > ⚠️ **La v3.0 está obsoleta.** Es anterior a la integración de Firebase: no
-> sincroniza las citas con la base de datos. Descarga siempre la **v6.1**.
+> sincroniza las citas con la base de datos. Descarga siempre la **v6.2**.
 
 > Si prefieres ver todas las versiones, entra en
 > [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) o en la
-> [página de la release v6.1](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v6.1).
+> [página de la release v6.2](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v6.2).
 
 ---
 
@@ -57,7 +59,7 @@ Toca **"Instalar de todas formas"**.
 Con el teléfono conectado por USB y la *Depuración USB* activada:
 
 ```bash
-adb install CitasMedicas-v6.1.apk
+adb install CitasMedicas-v6.2.apk
 ```
 
 ---
@@ -122,7 +124,7 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 - **Aquí puedes comprobar la versión:** bajo tu correo hay una etiqueta gris.
   Debe decir **«Conectado a Firebase (citas-medicas-e19ca)»**.
   Si dice **«Datos de prueba (sin base de datos)»**, tienes instalada una versión
-  antigua (v3.0 o anterior): desinstálala e instala la **v6.1**.
+  antigua (v3.0 o anterior): desinstálala e instala la **v6.2**.
 - Los contadores muestran **citas próximas** y **total**.
 - 🆕 **Y confirma el rol**: si eres **administrador** debe aparecer la pestaña
   **«Médicos»** en la barra inferior; si eres **médico**, **«Mi Agenda»**.
@@ -154,7 +156,7 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 
 > ✅ **Siguiente paso (ya hecho):** la base de datos real con
 > **Firebase / Firestore** está integrada desde la v4.0, el **portal del médico**
-> desde la v6.0 y la **agenda por prioridad** desde la v6.1. Para conectarla a tu propio proyecto, sigue
+> desde la v6.0 y la **agenda por prioridad** desde la v6.2. Para conectarla a tu propio proyecto, sigue
 > **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**.
 
 ---
@@ -163,24 +165,24 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 
 Si quieres comprobar que el archivo descargado es exactamente el que generó la CI:
 
-**SHA-256** (APK de la release `v6.1`):
+**SHA-256** (APK de la release `v6.2`):
 
 ```
-4526dac5518af0617521046b2f58f76d107c474a4e58ed8890c35e0fd21d48ec
+cc4692c2c2bc3396f58447607c5456990696434a90d5428a3b0ea77ce0fde634
 ```
 
-Tamaño exacto: **5 727 949 bytes** (5.5 MB).
+Tamaño exacto: **5 742 192 bytes** (5.5 MB).
 
 Comprobar en Linux/macOS:
 
 ```bash
-sha256sum CitasMedicas-v6.1.apk
+sha256sum CitasMedicas-v6.2.apk
 ```
 
 En Windows (PowerShell):
 
 ```powershell
-Get-FileHash CitasMedicas-v6.1.apk -Algorithm SHA256
+Get-FileHash CitasMedicas-v6.2.apk -Algorithm SHA256
 ```
 
 Los dos valores deben coincidir.
@@ -255,7 +257,7 @@ El APK queda en `app/build/outputs/apk/release/app-release.apk`.
 
 ---
 
-## 👨‍⚕️ Portal del médico y alta de médicos (novedad v6.0, ampliado en v6.1)
+## 👨‍⚕️ Portal del médico y alta de médicos (novedad v6.0, ampliado en v6.2)
 
 La app ahora tiene **tres roles** y cada uno ve una cosa distinta:
 
@@ -310,6 +312,25 @@ aterriza directamente en **Mi Agenda** con las citas que le hayan reservado.
 > contraseña. Crear contraseñas por otros es un riesgo de seguridad y además queda
 > registrado en los logs.
 
+### 🆕 v6.2 — Los cinco fallos que reportaste, corregidos
+
+Todos compartían la misma raíz: al iniciar sesión la app **reescribía el documento de rol**
+(`/users/{uid}`) con lo que creía saber, y cuando no lo sabía escribía `patient`.
+
+| Lo que veías | Qué pasaba de verdad | Cómo comprobarlo en la v6.2 |
+|---|---|---|
+| «Entro como administrador y me registra como paciente» | Un error de permisos se leía como «no tienes perfil» y el perfil nuevo se creaba como `patient` | Entra con tu cuenta admin: **sigues viendo la pestaña Médicos** |
+| El médico ve «no hay nada» y «sin conexión» con WiFi | Su perfil no tenía `doctorId` → la regla devolvía **403** y la app lo disfrazaba de red | La agenda del médico **carga desde Firestore** |
+| Nombre del correo, edad **30**, teléfono vacío | El login sólo trae el correo; la edad se rellenaba con un `30` fijo | El perfil del médico muestra **su nombre y su edad reales** |
+| Grupo sanguíneo y aseguradora en el perfil del médico | Se pintaba la tarjeta de paciente a todo el mundo | El médico ve **Ficha profesional**, no el expediente clínico |
+| «En especialidad no se agrega al dar de alta un médico» | El `specialtyId` se derivaba del texto libre y no existía en `specialties` | La especialidad se **elige de una lista** |
+
+**Nuevo: el médico completa su ficha.** En **Perfil → Completar mi ficha** rellena teléfono,
+consultorio, reseña y tarifa. Antes no existía ese formulario y la ficha se quedaba a medias.
+
+> ⚠️ **Requisito:** publica la [`firestore.rules`](firestore.rules) nueva en **Firebase
+> Console → Firestore Database → Reglas**. Sin ese cambio el médico sigue recibiendo 403.
+
 ### 🆕 v6.1 — La agenda separa lo que falta de lo atendido
 
 Al entrar como médico, **Mi Agenda** muestra dos secciones:
@@ -324,7 +345,7 @@ Cada tarjeta pendiente tiene dos botones: **«Marcar como atendida»** (estado
 porque exige reprogramar o cerrar el hueco). El cambio se guarda en Firestore tocando
 **sólo el campo `status`**, así no se pierden el paciente, la fecha ni el motivo.
 
-### 🆕 v6.1 — El registro pregunta el tipo de cuenta
+### 🆕 v6.2 — El registro pregunta el tipo de cuenta
 
 Al pulsar **Regístrate** verás un selector **Paciente / Médico**. Si eliges **Médico**,
 además de crear la cuenta la app intenta **vincular** la ficha que el administrador creó
@@ -340,7 +361,7 @@ con ese correo, para que entres directo en **Mi Agenda**.
 
 | Lo que ves | Qué pasa | Solución |
 |---|---|---|
-| **«No se pudo leer tu agenda»** (v6.1) o «No tienes citas» (v6.0) | **No existe tu ficha en `doctors`**, así que Firestore devuelve 403 | Que el admin te dé de alta en **Médicos** con **tu mismo correo** |
+| **«No se pudo leer tu agenda»** (v6.2) o «No tienes citas» (v6.0) | **No existe tu ficha en `doctors`**, así que Firestore devuelve 403 | Que el admin te dé de alta en **Médicos** con **tu mismo correo** |
 | **«No tienes citas este día»** y la cita existe | El `doctorId` de la cita **no coincide** con el id de tu ficha | Abre la cita en Firestore: su `doctorId` debe ser el id del documento de tu ficha |
 
 > 🕐 **No es un problema de hora.** La agenda trae todas las citas del médico y filtra

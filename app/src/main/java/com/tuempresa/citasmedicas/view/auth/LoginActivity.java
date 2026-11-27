@@ -296,21 +296,49 @@ public class LoginActivity extends AppCompatActivity {
                     @Override
                     public void onRole(@NonNull com.tuempresa.citasmedicas.model.UserRole role,
                                        @Nullable String doctorId) {
-                        session.updateRole(role, doctorId);
-                        setLoading(false);
-                        Navigator.navigateClearingStack(LoginActivity.this,
-                                new Routes.Main(Navigator.homeTabForRole(role)));
+                        onRolResuelto(session, role, doctorId, null);
+                    }
+
+                    @Override
+                    public void onRolConFicha(
+                            @NonNull com.tuempresa.citasmedicas.model.UserRole role,
+                            @Nullable String doctorId,
+                            @Nullable com.tuempresa.citasmedicas.model.Doctor ficha) {
+                        onRolResuelto(session, role, doctorId, ficha);
                     }
 
                     @Override
                     public void onFallback(@NonNull String motivo) {
-                        // Sin red o sin documento de rol: se entra como paciente. Es el
-                        // permiso mínimo y no impide usar la app.
+                        // Sin red o sin documento de rol: se entra con el rol que ya
+                        // tuviera la sesión. Antes se forzaba la pestaña de paciente, y
+                        // eso hacía que un médico o un admin perdieran su pantalla al
+                        // abrir la app sin cobertura.
                         setLoading(false);
+                        com.tuempresa.citasmedicas.model.UserRole previo = session.getRole();
                         Navigator.navigateClearingStack(LoginActivity.this,
-                                new Routes.Main(Routes.Tab.DOCTORS));
+                                new Routes.Main(Navigator.homeTabForRole(previo)));
                     }
                 });
+    }
+
+    /**
+     * Aplica el rol resuelto a la sesión y entra en la pestaña que le toca.
+     * <p>
+     * <b>Si es médico, además copia su ficha.</b> Sin esto el perfil mostraba el nombre
+     * derivado del correo, la edad a 0 y el teléfono vacío aunque la ficha en Firestore
+     * tuviera los datos buenos.
+     */
+    private void onRolResuelto(@NonNull SessionManager session,
+                               @NonNull com.tuempresa.citasmedicas.model.UserRole role,
+                               @Nullable String doctorId,
+                               @Nullable com.tuempresa.citasmedicas.model.Doctor ficha) {
+        session.updateRole(role, doctorId);
+        if (ficha != null) {
+            session.aplicarFichaDeMedico(ficha.getFullName(), ficha.getAge(), ficha.getPhone());
+        }
+        setLoading(false);
+        Navigator.navigateClearingStack(this,
+                new Routes.Main(Navigator.homeTabForRole(role)));
     }
 
     private void setLoading(boolean loading) {

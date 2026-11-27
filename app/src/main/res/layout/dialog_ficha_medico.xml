@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Formulario para que el MÉDICO complete los datos de su propia ficha.
+
+  Por qué existe: el administrador da de alta la ficha con lo mínimo (nombre, correo,
+  especialidad). El teléfono del consultorio y la reseña sólo los conoce el médico, y
+  pedírselos al administrador acababa dejando la ficha con huecos. Con este formulario
+  el alta queda cerrada: el médico entra con el correo que le dieron y termina de
+  rellenarla.
+
+  Los campos se precargan con lo que ya haya guardado, así que reabrir el diálogo
+  equivale a editar, no a empezar de cero.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/ficha_telefono_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFichaTelefono"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="phone"
+                android:maxLength="20" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/ficha_hospital_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFichaHospital"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapWords" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/ficha_bio_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFichaBio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapSentences|textMultiLine"
+                android:maxLines="4"
+                android:minLines="2" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/ficha_tarifa_hint">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFichaTarifa"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+</ScrollView>

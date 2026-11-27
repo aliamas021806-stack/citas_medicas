@@ -9,6 +9,8 @@ import static org.junit.Assert.assertTrue;
 import com.tuempresa.citasmedicas.model.Appointment;
 import com.tuempresa.citasmedicas.model.AppointmentStatus;
 import com.tuempresa.citasmedicas.model.Doctor;
+import com.tuempresa.citasmedicas.model.UserRole;
+import com.tuempresa.citasmedicas.viewmodel.AdminDoctoresViewModel;
 
 import org.junit.Test;
 
@@ -38,6 +40,69 @@ import java.util.List;
 public class AgendaPrioridadTest {
 
     private static final String HOY = "2026-11-26";
+
+    /**
+     * <b>El fallo del administrador degradado a paciente.</b>
+     * <p>
+     * Síntoma reportado: «cada vez que ingreso con mi cuenta de administrador me
+     * registra como paciente». La causa era que la app trataba un error de permisos
+     * (403) igual que un «no existe tu perfil» (404), y al «crear» el perfil escribía
+     * {@code role: "patient"} encima del documento del admin.
+     * <p>
+     * La corrección tiene dos mitades y aquí se fijan las dos:
+     * <ol>
+     *   <li>Un rol ya guardado como {@code admin} se respeta tal cual y no se degrada.</li>
+     *   <li>Un rol desconocido (perfil ilegible) cae en {@code patient}, que es el
+     *       permiso mínimo, pero <b>sin</b> reescribir nada en Firestore.</li>
+     * </ol>
+     */
+    @Test
+    public void elRolDeAdminNuncaSeDegradaAlIniciarSesion() {
+        assertEquals(UserRole.ADMIN, UserRole.fromValue("admin"));
+        // La comparación no depende de mayúsculas ni espacios: el valor lo escribe a
+        // mano el administrador en la consola de Firebase.
+        assertEquals(UserRole.ADMIN, UserRole.fromValue("  ADMIN  "));
+        assertTrue(UserRole.fromValue("admin").isAdmin());
+        assertFalse(UserRole.fromValue("admin").isDoctor());
+    }
+
+    /**
+     * Un valor ilegible o vacío cae en paciente, que es el permiso mínimo.
+     * <p>
+     * Es la mitad «segura» de la corrección: si no se pudo leer el perfil, se entra con
+     * lo mínimo en lugar de inventar un rol alto. Lo importante es que ese {@code patient}
+     * es sólo el rol <i>en memoria</i>; ya no se escribe en Firestore, así que no puede
+     * pisar el {@code admin} del servidor.
+     */
+    @Test
+    public void unPerfilIlegibleCaeEnElPermisoMinimoSinInventarRoles() {
+        assertEquals(UserRole.PATIENT, UserRole.fromValue(null));
+        assertEquals(UserRole.PATIENT, UserRole.fromValue(""));
+        assertEquals(UserRole.PATIENT, UserRole.fromValue("administrador"));
+        assertEquals(UserRole.PATIENT, UserRole.fromValue("root"));
+        assertFalse(UserRole.fromValue(null).isAdmin());
+        assertFalse(UserRole.fromValue(null).isDoctor());
+    }
+
+    /**
+     * <b>La especialidad tiene que ser la del catálogo.</b>
+     * <p>
+     * Síntoma reportado: «en especialidad no se agrega cuando yo agrego un médico». La
+     * causa era que se derivaba el id del texto libre: escribir «podologia» guardaba
+     * {@code specialtyId: "podologia"}, que no existe en {@code specialties}, así que el
+     * médico nunca aparecía al filtrar por su especialidad.
+     * <p>
+     * Aquí se fija que la normalización siga siendo correcta (es el respaldo cuando no
+     * hay catálogo) y que los acentos no dejen guiones sueltos.
+     */
+    @Test
+    public void laEspecialidadDerivadaNoDejaRestosDeAcentos() {
+        assertEquals("cardiologia", AdminDoctoresViewModel.especialidadIdDesde("Cardiología"));
+        assertEquals("pediatria", AdminDoctoresViewModel.especialidadIdDesde("Pediatría"));
+        assertEquals("medicina_general",
+                AdminDoctoresViewModel.especialidadIdDesde("Medicina General"));
+        assertEquals("general", AdminDoctoresViewModel.especialidadIdDesde("   "));
+    }
     private static final String AYER = "2026-11-25";
 
     /** Cita mínima para las pruebas. */

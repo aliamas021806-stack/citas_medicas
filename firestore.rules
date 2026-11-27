@@ -106,11 +106,26 @@ service cloud.firestore {
       // para nombrar médicos).
       allow read: if (autenticado() && request.auth.uid == uid) || esAdmin();
 
-      // Alta: el documento nace como paciente y sin ficha de médico.
+      // Alta: el documento nace como paciente y sin ficha de médico, SALVO que la
+      // cuenta sea la dueña verificable de una ficha de médico (mismo correo, ficha
+      // sin reclamar). En ese caso puede nacer ya como 'doctor' con su doctorId.
+      //
+      // Sin esa segunda puerta, un médico que nunca había tenido documento de perfil
+      // se quedaba sin poder escribir `role: "doctor"`, su perfil nacía como paciente
+      // y `miDoctorId()` devolvía '' → su agenda recibía 403 y la app decía «sin
+      // conexión» aunque la red funcionara. La puerta no permite autoascenderse:
+      // exige que exista la ficha y que su correo sea el del token.
       allow create: if autenticado()
                     && request.auth.uid == uid
-                    && request.resource.data.role == 'patient'
-                    && !request.resource.data.keys().hasAny(['doctorId']);
+                    && (
+                         (request.resource.data.role == 'patient'
+                          && !request.resource.data.keys().hasAny(['doctorId']))
+                         ||
+                         (request.resource.data.role == 'doctor'
+                          && request.resource.data.doctorId is string
+                          && request.resource.data.doctorId != ''
+                          && fichaPropuestaEsMia())
+                       );
 
       // El usuario edita su perfil (nombre, correo, foto), pero NO el rol ni el
       // doctorId. Si esta regla permitiese doctorId, un paciente podría escribir
@@ -128,6 +143,23 @@ service cloud.firestore {
                     && request.auth.uid == uid
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['doctorId'])
+                    && request.resource.data.doctorId != ''
+                    && fichaPropuestaEsMia();
+
+      // Excepción controlada: pasar a 'doctor' y quedarse con su ficha en la MISMA
+      // escritura. El cliente envía role + doctorId + email juntos cuando descubre
+      // que la cuenta es de un médico y su perfil estaba incompleto.
+      //
+      // El límite sigue siendo el mismo: `fichaPropuestaEsMia()` exige que la ficha
+      // exista, tenga el correo del token y no esté reclamada por otra cuenta. Nadie
+      // puede ascenderse a médico sin que un administrador le haya dado de alta.
+      // 'admin' NO aparece aquí a propósito: ese rol sólo se escribe desde la consola.
+      allow update: if autenticado()
+                    && request.auth.uid == uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['role', 'doctorId', 'email'])
+                    && request.resource.data.role == 'doctor'
+                    && request.resource.data.doctorId is string
                     && request.resource.data.doctorId != ''
                     && fichaPropuestaEsMia();
 

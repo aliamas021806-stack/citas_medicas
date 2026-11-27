@@ -464,6 +464,74 @@ public class FirestoreUserRepository {
                 });
     }
 
+    /** Resultado de guardar los datos de la ficha del médico. */
+    public interface FichaCallback {
+        void onOk();
+
+        void onError(@NonNull String mensaje);
+    }
+
+    /**
+     * Guarda los datos que sólo el médico puede aportar: teléfono, consultorio, reseña
+     * y tarifa.
+     * <p>
+     * <b>Por qué lo hace el médico y no el administrador.</b> El alta la hace el
+     * administrador con el correo del médico y cuatro datos; obligarle a inventar el
+     * teléfono del consultorio es justo lo que dejaba el perfil con huecos. El médico
+     * entra con su cuenta y lo completa él.
+     * <p>
+     * <b>Qué permite el servidor.</b> La regla de {@code doctors} deja que el dueño de
+     * la ficha (su {@code email} coincide con el del token) actualice cualquier campo
+     * <i>menos</i> el correo, que es el que le identifica. Por eso la máscara del PATCH
+     * incluye sólo estos cuatro campos: ni {@code email} ni {@code userId} ni el rol.
+     */
+    public void actualizarMiFicha(@NonNull String doctorId,
+                                  @Nullable String phone, @Nullable String hospital,
+                                  @Nullable String bio, double tarifa,
+                                  @NonNull final FichaCallback callback) {
+        if (doctorId == null || doctorId.trim().isEmpty()) {
+            callback.onError("Esta cuenta no está vinculada a ninguna ficha de médico");
+            return;
+        }
+
+        Map<String, FirestoreApi.Value> f = new HashMap<>();
+        f.put("phone", FirestoreApi.ofString(phone != null ? phone.trim() : ""));
+        f.put("hospital", FirestoreApi.ofString(hospital != null ? hospital.trim() : ""));
+        f.put("bio", FirestoreApi.ofString(bio != null ? bio.trim() : ""));
+        if (tarifa > 0) {
+            f.put("consultationFee", FirestoreApi.ofDouble(tarifa));
+        }
+
+        FirestoreApi.FirestoreDocument doc = new FirestoreApi.FirestoreDocument();
+        doc.fields = f;
+
+        api.updateDocument(FirebaseConfig.COLLECTION_DOCTORS, doctorId,
+                        new java.util.ArrayList<>(f.keySet()), doc)
+                .enqueue(new retrofit2.Callback<FirestoreApi.FirestoreDocument>() {
+                    @Override
+                    public void onResponse(
+                            @NonNull Call<FirestoreApi.FirestoreDocument> call,
+                            @NonNull Response<FirestoreApi.FirestoreDocument> response) {
+                        if (response.isSuccessful()) {
+                            callback.onOk();
+                        } else if (response.code() == 403 || response.code() == 401) {
+                            // El caso real: la cuenta no es la dueña de esa ficha.
+                            callback.onError("Firestore no autorizó el cambio: esta cuenta "
+                                    + "no es la dueña de esa ficha médica");
+                        } else {
+                            callback.onError("No se pudo guardar la ficha: HTTP "
+                                    + response.code());
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<FirestoreApi.FirestoreDocument> call,
+                                          @NonNull Throwable t) {
+                        callback.onError("Sin conexión al guardar la ficha: " + t.getMessage());
+                    }
+                });
+    }
+
     /** Cambia el rol de un usuario. Sólo un administrador puede hacerlo (regla). */
     public void asignarRol(@NonNull String uid, @NonNull UserRole rol,
                            @Nullable String doctorId,
