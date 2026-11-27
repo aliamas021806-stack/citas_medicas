@@ -12,24 +12,29 @@ necesidad de Android Studio, sin emulador y sin conocimientos técnicos.
 
 **Descarga directa (no hace falta cuenta de GitHub):**
 
-### 👉 [Descargar CitasMedicas-v6.0.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.0/CitasMedicas-v6.0.apk)
+### 👉 [Descargar CitasMedicas-v6.1.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.1/CitasMedicas-v6.1.apk)
 
-- Tamaño: **5.4 MB** (5 704 849 bytes)
-- Versión: **6.0** (versionCode 6)
+- Tamaño: **5.5 MB** (5 727 949 bytes)
+- Versión: **6.1** (versionCode 7)
 - Requisito: **Android 7.0 o superior** (API 24+)
 - Firmado con certificado de release ✅
 
-> 🆕 **Esta es la v6.0 e incluye el portal del médico y el alta de médicos.** Para
-> confirmarlo dentro de la app: si eres **administrador** verás la pestaña
-> **«Médicos»**; si eres **médico**, **«Mi Agenda»**. Un paciente ve
-> Doctores · Mis Citas · Perfil.
+> 🆕 **Esta es la v6.1.** Trae dos novedades sobre la v6.0:
+>
+> 1. **La agenda del médico separa lo que falta de lo atendido**, con botones
+>    «Marcar como atendida» y «El paciente no acudió».
+> 2. **El registro pregunta si creas una cuenta de Paciente o de Médico.**
+>
+> Para confirmarlo dentro de la app: si eres **administrador** verás la pestaña
+> **«Médicos»**; si eres **médico**, **«Mi Agenda»** con las dos secciones. Un paciente
+> ve Doctores · Mis Citas · Perfil.
 
 > ⚠️ **La v3.0 está obsoleta.** Es anterior a la integración de Firebase: no
-> sincroniza las citas con la base de datos. Descarga siempre la **v6.0**.
+> sincroniza las citas con la base de datos. Descarga siempre la **v6.1**.
 
 > Si prefieres ver todas las versiones, entra en
 > [Releases](https://github.com/aliamas021806-stack/citas_medicas/releases) o en la
-> [página de la release v6.0](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v6.0).
+> [página de la release v6.1](https://github.com/aliamas021806-stack/citas_medicas/releases/tag/v6.1).
 
 ---
 
@@ -52,7 +57,7 @@ Toca **"Instalar de todas formas"**.
 Con el teléfono conectado por USB y la *Depuración USB* activada:
 
 ```bash
-adb install CitasMedicas-v6.0.apk
+adb install CitasMedicas-v6.1.apk
 ```
 
 ---
@@ -117,7 +122,7 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 - **Aquí puedes comprobar la versión:** bajo tu correo hay una etiqueta gris.
   Debe decir **«Conectado a Firebase (citas-medicas-e19ca)»**.
   Si dice **«Datos de prueba (sin base de datos)»**, tienes instalada una versión
-  antigua (v3.0 o anterior): desinstálala e instala la **v6.0**.
+  antigua (v3.0 o anterior): desinstálala e instala la **v6.1**.
 - Los contadores muestran **citas próximas** y **total**.
 - 🆕 **Y confirma el rol**: si eres **administrador** debe aparecer la pestaña
   **«Médicos»** en la barra inferior; si eres **médico**, **«Mi Agenda»**.
@@ -148,8 +153,8 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 | **Keystore incluida** | El repositorio incluye la keystore de demostración para que CI pueda firmar el APK sin secretos. En producción nunca se subiría. |
 
 > ✅ **Siguiente paso (ya hecho):** la base de datos real con
-> **Firebase / Firestore** está integrada desde la v4.0, y el **portal del médico**
-> desde la v6.0. Para conectarla a tu propio proyecto, sigue
+> **Firebase / Firestore** está integrada desde la v4.0, el **portal del médico**
+> desde la v6.0 y la **agenda por prioridad** desde la v6.1. Para conectarla a tu propio proyecto, sigue
 > **[CONECTAR_FIREBASE.md](CONECTAR_FIREBASE.md)**.
 
 ---
@@ -158,24 +163,24 @@ Una vez has iniciado sesión, todo lo que sigue funciona **aunque te quedes sin 
 
 Si quieres comprobar que el archivo descargado es exactamente el que generó la CI:
 
-**SHA-256** (APK de la release `v6.0`):
+**SHA-256** (APK de la release `v6.1`):
 
 ```
-89350892697aaefd9d3d59bb8fdfba8d7e92f6f843a9d4264747e2742079c763
+4526dac5518af0617521046b2f58f76d107c474a4e58ed8890c35e0fd21d48ec
 ```
 
-Tamaño exacto: **5 704 849 bytes** (5.4 MB).
+Tamaño exacto: **5 727 949 bytes** (5.5 MB).
 
 Comprobar en Linux/macOS:
 
 ```bash
-sha256sum CitasMedicas-v6.0.apk
+sha256sum CitasMedicas-v6.1.apk
 ```
 
 En Windows (PowerShell):
 
 ```powershell
-Get-FileHash CitasMedicas-v6.0.apk -Algorithm SHA256
+Get-FileHash CitasMedicas-v6.1.apk -Algorithm SHA256
 ```
 
 Los dos valores deben coincidir.
@@ -221,9 +226,10 @@ SHA-256: 3df1af33ce2aae8a300723a6509db9f061df334bad97d8a2e6ae485eff7ec5b4
 ./gradlew testDebugUnitTest
 ```
 
-**273 pruebas automatizadas · 0 fallos.** Incluyen pruebas que abren todas las
+**291 pruebas automatizadas · 0 fallos.** Incluyen pruebas que abren todas las
 pantallas y recorren el flujo completo (login → agendar → ver cita → cancelar), las de
-la capa Firebase por REST y las del **portal del médico** (31 en `PortalMedicoTest`).
+la capa Firebase por REST, las del **portal del médico** (31 en `PortalMedicoTest`) y
+las de la **agenda por prioridad** (18 en `AgendaPrioridadTest`).
 
 ### Compilar el APK desde cero
 
@@ -249,7 +255,7 @@ El APK queda en `app/build/outputs/apk/release/app-release.apk`.
 
 ---
 
-## 👨‍⚕️ Portal del médico y alta de médicos (novedad v6.0)
+## 👨‍⚕️ Portal del médico y alta de médicos (novedad v6.0, ampliado en v6.1)
 
 La app ahora tiene **tres roles** y cada uno ve una cosa distinta:
 
@@ -303,6 +309,54 @@ aterriza directamente en **Mi Agenda** con las citas que le hayan reservado.
 > ⚠️ **No le crees la cuenta tú.** El médico debe registrarse él mismo para elegir su
 > contraseña. Crear contraseñas por otros es un riesgo de seguridad y además queda
 > registrado en los logs.
+
+### 🆕 v6.1 — La agenda separa lo que falta de lo atendido
+
+Al entrar como médico, **Mi Agenda** muestra dos secciones:
+
+| Sección | Qué contiene | Orden |
+|---|---|---|
+| **Pendientes de atender** | Todo lo que aún requiere decisión, **incluida una cita pendiente de ayer** | Día consultado primero, luego por hora |
+| **Ya atendidas** | Sólo las del día que estás mirando | Por hora |
+
+Cada tarjeta pendiente tiene dos botones: **«Marcar como atendida»** (estado
+`Attended`) y **«El paciente no acudió»** (estado `NoShow`, que sigue en pendientes
+porque exige reprogramar o cerrar el hueco). El cambio se guarda en Firestore tocando
+**sólo el campo `status`**, así no se pierden el paciente, la fecha ni el motivo.
+
+### 🆕 v6.1 — El registro pregunta el tipo de cuenta
+
+Al pulsar **Regístrate** verás un selector **Paciente / Médico**. Si eliges **Médico**,
+además de crear la cuenta la app intenta **vincular** la ficha que el administrador creó
+con ese correo, para que entres directo en **Mi Agenda**.
+
+> ⚠️ **Si eliges «Médico» pero el administrador no te dio de alta con ese mismo correo**,
+> verás el aviso *«Tu cuenta se ha creado, pero no hay ninguna ficha de médico con este
+> correo»*. La cuenta existe y sirve como paciente; pide el alta y vuelve a entrar.
+> Un médico **no puede crear su propia ficha**: eso permitiría a cualquiera
+> autoproclamarse médico, porque la API key de Firebase es pública por diseño.
+
+### ❓ «Soy médico y no me aparece mi cita» — las dos causas reales
+
+| Lo que ves | Qué pasa | Solución |
+|---|---|---|
+| **«No se pudo leer tu agenda»** (v6.1) o «No tienes citas» (v6.0) | **No existe tu ficha en `doctors`**, así que Firestore devuelve 403 | Que el admin te dé de alta en **Médicos** con **tu mismo correo** |
+| **«No tienes citas este día»** y la cita existe | El `doctorId` de la cita **no coincide** con el id de tu ficha | Abre la cita en Firestore: su `doctorId` debe ser el id del documento de tu ficha |
+
+> 🕐 **No es un problema de hora.** La agenda trae todas las citas del médico y filtra
+> por día en el móvil, así que una cita de hoy a las 12:00 se ve aunque sean las 18:46.
+
+**Comprobación en 3 pasos en Firebase Console** (los ids deben coincidir):
+
+1. **`doctors`** → tu ficha → apunta el **id del documento**.
+2. **`appointments`** → tu cita → el campo `doctorId` debe ser ese id.
+3. **`users`** → tu documento (uid de Authentication) → `doctorId` = ese id, `role: "doctor"`.
+
+Si el paso 3 falla, **cierra sesión y vuelve a entrar**: la vinculación se escribe al
+iniciar sesión, no al dar de alta la ficha.
+
+> 🗂️ **Ojo con la colección.** Una ficha de médico creada por error en **`patients`** no
+> sirve: la agenda sólo busca en **`doctors`**.
 
 ### Probar el flujo completo sin dos teléfonos
 

@@ -34,14 +34,13 @@ import com.tuempresa.citasmedicas.viewmodel.AuthViewModel;
 public class LoginActivity extends AppCompatActivity {
 
     private TextInputLayout tilName, tilLastName, tilAge, tilPhone, tilBloodType,
-            tilInsurance, tilAllergies, tilEspecialidad;
+            tilInsurance, tilAllergies;
     private TextInputEditText etName, etLastName, etAge, etPhone, etBloodType,
             etInsurance, etAllergies, etEmail, etPassword;
     private MaterialButton btnSubmit, btnTipoPaciente, btnTipoMedico;
     private ProgressBar progressBar;
     private TextView tvToggle, tvError, tvTipoCuentaAyuda;
     private View groupTipoCuenta;
-    private com.google.android.material.textfield.MaterialAutoCompleteTextView acEspecialidad;
 
     private boolean isRegisterMode = false;
     /** {@code true} si en el registro se ha elegido «Médico». */
@@ -68,12 +67,10 @@ public class LoginActivity extends AppCompatActivity {
      * Selector «Paciente / Médico» del registro.
      * <p>
      * <b>Qué decide y qué no.</b> No da el rol: eso lo resuelve Firestore al iniciar
-     * sesión. Lo que hace es dos cosas prácticas:
-     * <ul>
-     *   <li>Mostrar la especialidad, que es el dato mínimo de la ficha de médico.</li>
-     *   <li>Intentar vincular (o crear) la ficha del médico justo después del registro,
-     *       para que no tenga que cerrar sesión y volver a entrar.</li>
-     * </ul>
+     * sesión. Lo único que hace es intentar vincular la ficha que el administrador haya
+     * creado con este correo justo después del registro, para que el médico no tenga que
+     * cerrar sesión y volver a entrar. Si no hay ficha, la cuenta sigue siendo válida como
+     * paciente y se le explica qué falta.
      */
     private void configurarTipoCuenta() {
         if (groupTipoCuenta == null) {
@@ -85,11 +82,6 @@ public class LoginActivity extends AppCompatActivity {
 
         btnTipoPaciente.setOnClickListener(v -> actualizarTipoCuenta(false));
         btnTipoMedico.setOnClickListener(v -> actualizarTipoCuenta(true));
-
-        acEspecialidad.setSimpleItems(new String[]{
-                getString(R.string.specialty_general), "Cardiología", "Pediatría",
-                "Dermatología", "Ginecología", "Traumatología", "Neurología", "Psiquiatría"
-        });
     }
 
     /** Aplica la elección de tipo de cuenta a la visibilidad de los campos. */
@@ -99,9 +91,6 @@ public class LoginActivity extends AppCompatActivity {
             tvTipoCuentaAyuda.setText(medico
                     ? R.string.registro_ayuda_medico
                     : R.string.registro_ayuda_paciente);
-        }
-        if (tilEspecialidad != null) {
-            tilEspecialidad.setVisibility(medico ? View.VISIBLE : View.GONE);
         }
         // Los datos clínicos (sangre, seguro, alergias) son del expediente del paciente:
         // a un médico no se le piden, pero el teléfono sí (para su ficha de contacto).
@@ -140,8 +129,6 @@ public class LoginActivity extends AppCompatActivity {
         btnTipoPaciente = findViewById(R.id.btnTipoPaciente);
         btnTipoMedico = findViewById(R.id.btnTipoMedico);
         tvTipoCuentaAyuda = findViewById(R.id.tvTipoCuentaAyuda);
-        tilEspecialidad = findViewById(R.id.tilEspecialidad);
-        acEspecialidad = findViewById(R.id.acEspecialidad);
     }
 
     /** Campos que sólo existen en modo registro. */
@@ -161,14 +148,11 @@ public class LoginActivity extends AppCompatActivity {
         if (groupTipoCuenta != null) {
             groupTipoCuenta.setVisibility(visibilidad);
         }
-        // Al volver al login se ocultan especialidad y datos clínicos: en el login no se
-        // elige nada, el rol lo resuelve Firestore.
+        // Al volver al login se ocultan los datos clínicos: en el login no se elige nada,
+        // el rol lo resuelve Firestore.
         if (isRegisterMode) {
             actualizarTipoCuenta(tipoMedico);
         } else {
-            if (tilEspecialidad != null) {
-                tilEspecialidad.setVisibility(View.GONE);
-            }
             for (TextInputLayout campo : new TextInputLayout[]{
                     tilBloodType, tilInsurance, tilAllergies}) {
                 if (campo != null) {
@@ -280,9 +264,7 @@ public class LoginActivity extends AppCompatActivity {
         // ficha antes de resolver el rol: así entra directamente en su agenda.
         if (isRegisterMode && tipoMedico) {
             setLoading(true);
-            String especialidad = acEspecialidad != null && acEspecialidad.getText() != null
-                    ? acEspecialidad.getText().toString().trim() : "";
-            viewModel.vincularMedicoRecienRegistrado(user, especialidad,
+            viewModel.vincularMedicoRecienRegistrado(user,
                     (vinculado, doctorId) -> {
                         setLoading(false);
                         if (!vinculado) {

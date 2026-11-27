@@ -3,10 +3,12 @@ package com.tuempresa.citasmedicas.data.firebase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.tuempresa.citasmedicas.model.Appointment;
 import com.tuempresa.citasmedicas.model.AppointmentStatus;
+import com.tuempresa.citasmedicas.model.Doctor;
 
 import org.junit.Test;
 
@@ -264,12 +266,56 @@ public class AgendaPrioridadTest {
         assertEquals("NoShow", AppointmentStatus.NO_SHOW.getValue());
     }
 
+    /**
+     * Cuando Firestore <b>rechaza</b> la consulta hay que decirlo, no mostrar «no tienes
+     * citas».
+     * <p>
+     * Es el fallo que se reportó: la cuenta no estaba vinculada a una ficha, las reglas
+     * negaban la lectura (403) y la app caía al respaldo local vacío. El usuario veía
+     * «no tienes citas este día» con una cita real a las 12:00.
+     */
     @Test
-    public void laNormalizacionDeEspecialidadQuitaAcentosYEspacios() {
-        assertEquals("cardiologia",
-                FirestoreUserRepository.normalizarEspecialidad("Cardiología"));
-        assertEquals("medicina_general",
-                FirestoreUserRepository.normalizarEspecialidad("Medicina General"));
-        assertEquals("general", FirestoreUserRepository.normalizarEspecialidad("   "));
+    public void unRechazoDeFirestoreSeExplicaYNoSeDisfrazaDeAgendaVacia() {
+        assertNull("un 200 sin resultados es una agenda vacía legítima",
+                FirestoreDoctorAgendaRepository.avisoDeLectura(200, null));
+
+        String aviso = FirestoreDoctorAgendaRepository.avisoDeLectura(403,
+                "Missing or insufficient permissions.");
+        assertNotNull(aviso, "un 403 debe producir un aviso visible");
+        String texto = aviso != null ? aviso.toLowerCase(java.util.Locale.ROOT) : "";
+        assertTrue("el aviso debe explicar que falta la vinculación: " + aviso,
+                texto.contains("vinculada"));
+    }
+
+    /**
+     * La separación médico/paciente se apoya en {@link Doctor#matchesAccount}: una ficha
+     * de {@code doctors} sólo se vincula con la cuenta de su correo, y en cuanto queda
+     * reclamada por un {@code uid} nadie más puede quedársela, ni siquiera escribiendo el
+     * mismo correo. Es la comprobación que hace el registro antes de decir «ya eres
+     * médico».
+     */
+    @Test
+    public void unaFichaSoloSeVinculaConLaCuentaDeSuCorreo() {
+        Doctor invitada = new Doctor();
+        invitada.setId("doc_ana");
+        invitada.setFullName("Ana Torres");
+        invitada.setEmail("ana@clinica.com");
+        invitada.setUserId("");
+
+        // Todavía sin reclamar: la reconoce el correo de la ficha, con otro formato.
+        assertFalse(invitada.isLinked());
+        assertTrue(invitada.matchesAccount("uid_desconocido", "  ANA@clinica.com "));
+
+        // Otro correo no la reclama: seguiría siendo paciente.
+        assertFalse(invitada.matchesAccount("uid_paciente", "alex@correo.com"));
+
+        // Una vez reclamada manda el uid: el mismo correo desde otra cuenta no entra.
+        Doctor reclamada = new Doctor();
+        reclamada.setId("doc_ana");
+        reclamada.setEmail("ana@clinica.com");
+        reclamada.setUserId("uid_ana");
+        assertTrue(reclamada.isLinked());
+        assertTrue(reclamada.matchesAccount("uid_ana", "ana@clinica.com"));
+        assertFalse(reclamada.matchesAccount("uid_intruso", "ana@clinica.com"));
     }
 }

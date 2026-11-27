@@ -147,7 +147,16 @@ service cloud.firestore {
       // paciente y el médico necesita leer su propia ficha para vincularse.
       allow read: if autenticado();
 
-      // Alta de médicos: SÓLO administrador, desde la pantalla «Médicos».
+      // Alta de médicos: SÓLO administrador.
+      //
+      // Se probó a permitir que un médico creara SU PROPIA ficha al registrarse, y se
+      // descartó: como la API key es pública por diseño, cualquiera podía crearse una
+      // ficha con su propio correo y su propio uid, escribir el doctorId en su perfil y
+      // dejar de ser paciente. Es exactamente la separación médico/paciente que se
+      // quiere garantizar, así que el alta sigue siendo una acción de administración.
+      //
+      // El médico no necesita crear nada: el administrador da de alta su ficha con su
+      // correo y, al registrarse él con ese mismo correo, la vincula (regla de update).
       allow create: if esAdmin();
 
       // El admin edita cualquier ficha.

@@ -139,26 +139,6 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <!--
-                  Especialidad: sólo la piden los médicos, porque es el dato mínimo que
-                  necesita la ficha de 'doctors' para que su agenda funcione.
-                -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilEspecialidad"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="@dimen/spacing_md"
-                    android:hint="@string/registro_especialidad_hint"
-                    android:visibility="gone">
-
-                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                        android:id="@+id/acEspecialidad"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="none" />
-                </com.google.android.material.textfield.TextInputLayout>
-
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilLastName"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"

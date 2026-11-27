@@ -129,7 +129,6 @@ public class AuthViewModel extends AndroidViewModel {
      * cuenta sigue siendo válida como paciente y la interfaz explica qué falta.
      */
     public void vincularMedicoRecienRegistrado(@NonNull User user,
-                                               @Nullable String especialidad,
                                                @NonNull final VinculacionCallback callback) {
         if (!com.tuempresa.citasmedicas.data.firebase.FirebaseConfig.isEnabled()) {
             callback.onResultado(false, null);
@@ -145,66 +144,27 @@ public class AuthViewModel extends AndroidViewModel {
         final com.tuempresa.citasmedicas.data.firebase.FirestoreUserRepository roles =
                 new com.tuempresa.citasmedicas.data.firebase.FirestoreUserRepository(getApplication());
 
+        // No se crea nada aquí: el alta de la ficha es competencia del administrador
+        // (ver firestore.rules). Sólo se comprueba si ya existe una ficha con su correo.
         roles.cargarRol(uid, email, new com.tuempresa.citasmedicas.data.firebase
                 .FirestoreUserRepository.RoleCallback() {
             @Override
             public void onRole(@NonNull UserRole role, @Nullable String doctorId) {
-                if (role == UserRole.DOCTOR && doctorId != null && !doctorId.trim().isEmpty()) {
+                boolean esMedico = role == UserRole.DOCTOR
+                        && doctorId != null && !doctorId.trim().isEmpty();
+                if (esMedico) {
                     SessionManager.getInstance(getApplication()).updateRole(role, doctorId);
-                    callback.onResultado(true, doctorId);
-                    return;
                 }
-                // No había ficha con su correo. Se crea una propia para que su agenda
-                // funcione ya: es su propia ficha, con su propio uid, así que no viola
-                // ninguna regla (la ficha la escribe el dueño de la cuenta).
-                if (role == UserRole.ADMIN) {
-                    callback.onResultado(false, null);
-                    return;
-                }
-                crearFichaPropia(user, especialidad, callback);
+                // Si no hay ficha con su correo, NO se crea una: sólo un administrador
+                // puede darla de alta. La cuenta sigue siendo válida como paciente y la
+                // pantalla explica qué falta.
+                callback.onResultado(esMedico, esMedico ? doctorId : null);
             }
 
             @Override
             public void onFallback(@NonNull String motivo) {
-                crearFichaPropia(user, especialidad, callback);
+                callback.onResultado(false, null);
             }
         });
-    }
-
-    /**
-     * Crea la ficha del médico para la cuenta que se acaba de registrar.
-     * <p>
-     * Sólo se llega aquí cuando la cuenta es la dueña de la ficha: el {@code uid} que
-     * se escribe es el suyo, así que ni se apropia de una ficha ajena ni necesita
-     * permisos de administrador.
-     */
-    private void crearFichaPropia(@NonNull User user, @Nullable String especialidad,
-                                  @NonNull final VinculacionCallback callback) {
-        final String uid = user.getId();
-        final String email = user.getEmail();
-        if (uid == null || uid.trim().isEmpty() || email == null || email.trim().isEmpty()) {
-            callback.onResultado(false, null);
-            return;
-        }
-        com.tuempresa.citasmedicas.data.firebase.FirestoreUserRepository roles =
-                new com.tuempresa.citasmedicas.data.firebase.FirestoreUserRepository(getApplication());
-
-        roles.crearFichaDeMedicoPropia(uid, email, user.getFullName(), especialidad,
-                new com.tuempresa.citasmedicas.data.firebase
-                        .FirestoreUserRepository.FichaCallback() {
-                    @Override
-                    public void onCreada(@NonNull String doctorId) {
-                        SessionManager.getInstance(getApplication())
-                                .updateRole(UserRole.DOCTOR, doctorId);
-                        callback.onResultado(true, doctorId);
-                    }
-
-                    @Override
-                    public void onError(@NonNull String mensaje) {
-                        // No se bloquea el registro: la cuenta ya existe y es válida como
-                        // paciente. Se informa para que el usuario sepa qué pasó.
-                        callback.onResultado(false, null);
-                    }
-                });
     }
 }

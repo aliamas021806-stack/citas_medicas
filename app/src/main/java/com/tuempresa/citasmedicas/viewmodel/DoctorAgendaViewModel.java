@@ -51,6 +51,13 @@ public class DoctorAgendaViewModel extends AndroidViewModel {
     private final MutableLiveData<String> doctorId = new MutableLiveData<>();
     /** Último error al cambiar el estado de una cita. */
     private final MutableLiveData<String> errorEstado = new MutableLiveData<>();
+    /**
+     * Aviso de que Firestore <b>no dejó leer</b> la agenda (distinto de «no hay citas»).
+     * <p>
+     * Sin esto, una cuenta sin ficha vinculada veía «No tienes citas este día» y el
+     * usuario no tenía forma de saber que el problema era de permisos.
+     */
+    private final MutableLiveData<String> avisoLectura = new MutableLiveData<>();
 
     /** Todas las citas del médico (sin filtrar por día), ya ordenadas. */
     private List<Appointment> todas = new ArrayList<>();
@@ -111,11 +118,14 @@ public class DoctorAgendaViewModel extends AndroidViewModel {
         doctorId.setValue(id);
 
         agenda.setValue(Resource.loading());
+        avisoLectura.setValue(null);
         repositorio.cargarAgenda(id, new FirestoreDoctorAgendaRepository.AgendaCallback() {
             @Override
-            public void onAgenda(@NonNull List<Appointment> citas, boolean desdeNube) {
+            public void onAgenda(@NonNull List<Appointment> citas, boolean desdeNube,
+                                 @Nullable String aviso) {
                 deNube.setValue(desdeNube);
                 todas = citas;
+                avisoLectura.setValue(aviso);
                 publicarDelDia();
             }
 
@@ -172,6 +182,16 @@ public class DoctorAgendaViewModel extends AndroidViewModel {
     /** Último error al cambiar el estado (la vista lo consume una sola vez). */
     public LiveData<String> getErrorEstado() {
         return errorEstado;
+    }
+
+    /**
+     * Aviso de lectura bloqueada por las reglas, o {@code null} si Firestore respondió.
+     * <p>
+     * La vista lo usa para no limitarse a mostrar «no hay citas» cuando en realidad la
+     * consulta fue rechazada.
+     */
+    public LiveData<String> getAvisoLectura() {
+        return avisoLectura;
     }
 
     /** Consume el error para que no se repita al rotar la pantalla. */

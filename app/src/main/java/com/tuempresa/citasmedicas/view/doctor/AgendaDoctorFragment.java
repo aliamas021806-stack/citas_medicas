@@ -129,7 +129,34 @@ public class AgendaDoctorFragment extends Fragment {
             }
         });
 
+        // Si Firestore rechazó la lectura, el estado vacío debe decir eso y no «no tienes
+        // citas»: son dos situaciones distintas y confundirlas fue el origen del reporte.
+        viewModel.getAvisoLectura().observe(getViewLifecycleOwner(), this::renderAvisoLectura);
+
         viewModel.cargar();
+    }
+
+    /** Guarda el aviso de lectura para que el estado vacío no mienta. */
+    @Nullable
+    private String avisoLectura;
+
+    /**
+     * Refleja si Firestore permitió leer la agenda.
+     * <p>
+     * El texto se recuerda y se reevalúa el estado vacío, porque el aviso llega después
+     * de las listas y sin esto la pantalla podría quedarse con el mensaje genérico.
+     */
+    private void renderAvisoLectura(@Nullable String aviso) {
+        this.avisoLectura = (aviso != null && !aviso.trim().isEmpty()) ? aviso : null;
+        if (this.avisoLectura != null) {
+            if (tvEmptyHint != null) {
+                tvEmptyHint.setText(this.avisoLectura);
+                tvEmptyHint.setVisibility(View.VISIBLE);
+            }
+            if (tvSummary != null) {
+                tvSummary.setText(R.string.agenda_subtitle_sin_permiso);
+            }
+        }
     }
 
     /**
@@ -166,11 +193,14 @@ public class AgendaDoctorFragment extends Fragment {
                 emptyState.setVisibility(View.VISIBLE);
             }
             if (tvEmptyTitle != null) {
-                tvEmptyTitle.setText(R.string.agenda_sin_citas);
+                tvEmptyTitle.setText(avisoLectura != null
+                        ? R.string.agenda_lectura_bloqueada
+                        : R.string.agenda_sin_citas);
             }
             if (tvEmptyHint != null) {
                 tvEmptyHint.setVisibility(View.VISIBLE);
-                tvEmptyHint.setText(R.string.agenda_sin_citas_hint);
+                tvEmptyHint.setText(avisoLectura != null
+                        ? avisoLectura : getString(R.string.agenda_sin_citas_hint));
             }
             return;
         }

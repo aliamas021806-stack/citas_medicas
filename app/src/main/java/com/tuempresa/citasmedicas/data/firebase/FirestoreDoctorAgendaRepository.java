@@ -55,8 +55,13 @@ public class FirestoreDoctorAgendaRepository {
          * @param citas  citas del médico, ordenadas por fecha y hora
          * @param deNube {@code true} si vienen de Firestore, {@code false} si son el
          *               respaldo local
+         * @param aviso  {@code null} si todo fue bien; si Firestore <b>rechazó</b> la
+         *               consulta, el motivo en lenguaje claro. Se pasa a la pantalla
+         *               porque «no tengo citas» y «no me dejan leerlas» no significan lo
+         *               mismo y confundirlos fue justo el problema que se reportó.
          */
-        void onAgenda(@NonNull List<Appointment> citas, boolean deNube);
+        void onAgenda(@NonNull List<Appointment> citas, boolean deNube,
+                      @Nullable String aviso);
 
         void onError(@NonNull String mensaje);
     }
@@ -88,18 +93,24 @@ public class FirestoreDoctorAgendaRepository {
                         if (response.isSuccessful() && response.body() != null) {
                             List<Appointment> citas = leerDocumentos(response.body());
                             ordenarPorFecha(citas);
-                            if (!citas.isEmpty()) {
-                                callback.onAgenda(citas, true);
-                                return;
-                            }
-                            // Firestore respondió pero sin resultados: puede ser que aún
-                            // no tenga citas o que las tenga sólo en este dispositivo.
-                            callback.onAgenda(desdeRoom(doctorId), false);
+                            // `runQuery` devuelve 200 con cuerpo vacío cuando no hay
+                            // coincidencias: eso sí es «no tengo citas».
+                            callback.onAgenda(citas, true, null);
                         } else {
-                            // Sin permisos o error del servidor: se usa el respaldo.
+                            // 403 al leer la agenda casi siempre significa lo mismo: la
+                            // cuenta no tiene `doctorId` en /users/{uid}, así que las
+                            // reglas no la reconocen como médico. Antes se caía al
+                            // respaldo local en silencio y la pantalla decía «no tienes
+                            // citas», que es cierto pero engañoso: el problema no es que
+                            // no haya citas, es que no se pueden leer.
+                            String motivo = FirebaseErrors.describirErrorFirestore(
+                                    response.code(),
+                                    FirebaseErrors.cuerpoDeError(response));
                             android.util.Log.w(TAG, "Firestore respondió HTTP "
-                                    + response.code() + " al leer la agenda; se usa Room");
-                            callback.onAgenda(desdeRoom(doctorId), false);
+                                    + response.code() + " al leer la agenda de '" + doctorId
+                                    + "': " + motivo);
+                            callback.onAgenda(desdeRoom(doctorId), false,
+                                    avisoDeLectura(response.code(), motivo));
                         }
                     }
 
@@ -108,9 +119,27 @@ public class FirestoreDoctorAgendaRepository {
                                           @NonNull Throwable t) {
                         android.util.Log.w(TAG, "Sin conexión para leer la agenda: "
                                 + t.getMessage());
-                        callback.onAgenda(desdeRoom(doctorId), false);
+                        callback.onAgenda(desdeRoom(doctorId), false, null);
                     }
                 });
+    }
+
+    /**
+     * Explica en la pantalla por qué la agenda no se pudo leer.
+     * <p>
+     * Sólo el 403 tiene un mensaje propio, porque es el único caso que en la práctica se
+     * da (cuenta sin ficha vinculada) y el que el usuario puede resolver. Los demás
+     * errores del servidor se dejan con el respaldo local y sin aviso adicional: no hay
+     * nada accionable que contarle.
+     */
+    @Nullable
+    static String avisoDeLectura(int codigoHttp, @Nullable String motivo) {
+        if (codigoHttp == 403) {
+            return "Firestore no autorizó la lectura de tu agenda: esta cuenta no está "
+                    + "vinculada a una ficha de médico. Pide a un administrador que te dé "
+                    + "de alta con este mismo correo y vuelve a iniciar sesión.";
+        }
+        return null;
     }
 
     // ───────────────────────── Respaldo local ─────────────────────────

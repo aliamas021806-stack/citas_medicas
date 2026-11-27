@@ -24,8 +24,6 @@
     <string name="registro_ayuda_paciente">Verás Doctores, Mis Citas y Perfil. Podrás reservar citas.</string>
     <string name="registro_ayuda_medico">Verás Mi Agenda y Perfil. Tu cuenta se vinculará a la ficha
         que el administrador haya creado con este mismo correo.</string>
-    <string name="registro_especialidad_hint">Especialidad</string>
-    <string name="specialty_general">Medicina General</string>
     <string name="registro_medico_no_invitado">Tu cuenta se ha creado, pero no hay ninguna ficha de
         médico con este correo. Entrarás como paciente: pide al administrador que te dé de alta
         con este mismo correo y vuelve a iniciar sesión.</string>
@@ -145,6 +143,8 @@
     <string name="agenda_subtitle_local">Sin conexión: mostrando las citas guardadas en este teléfono</string>
     <string name="agenda_sin_citas">No tienes citas este día</string>
     <string name="agenda_sin_citas_hint">Cuando un paciente agende contigo, aparecerá aquí automáticamente</string>
+    <string name="agenda_lectura_bloqueada">No se pudo leer tu agenda</string>
+    <string name="agenda_subtitle_sin_permiso">Firestore no autorizó la consulta</string>
     <!-- Secciones de la agenda: primero lo que falta por atender. -->
     <string name="agenda_seccion_pendientes">Pendientes de atender</string>
     <string name="agenda_seccion_atendidas">Ya atendidas</string>
