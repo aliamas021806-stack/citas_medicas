@@ -10,6 +10,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.tuempresa.citasmedicas.data.firebase.FirestoreDoctorAgendaRepository;
 import com.tuempresa.citasmedicas.model.Appointment;
+import com.tuempresa.citasmedicas.model.AppointmentStatus;
 import com.tuempresa.citasmedicas.util.Resource;
 import com.tuempresa.citasmedicas.util.SessionManager;
 
@@ -32,11 +33,24 @@ public class DoctorAgendaViewModel extends AndroidViewModel {
     private final FirestoreDoctorAgendaRepository repositorio;
 
     private final MutableLiveData<Resource<List<Appointment>>> agenda = new MutableLiveData<>();
+    /**
+     * Citas pendientes de atender (las de hoy primero).
+     * <p>
+     * Va en un LiveData aparte de {@link #atendidas} porque la pantalla las pinta en dos
+     * secciones: lo que falta por resolver arriba y el histórico del día abajo. Si
+     * fueran una sola lista, una cita ya atendida de las 09:00 empujaría hacia abajo la
+     * de las 12:00 que aún hay que ver.
+     */
+    private final MutableLiveData<List<Appointment>> pendientes = new MutableLiveData<>();
+    /** Citas ya atendidas del día consultado. */
+    private final MutableLiveData<List<Appointment>> atendidasS = new MutableLiveData<>();
     /** Fecha del día que se está mostrando, en formato {@code yyyy-MM-dd}. */
     private final MutableLiveData<String> dia = new MutableLiveData<>();
     /** {@code true} si los datos vienen de Firestore y no del respaldo local. */
     private final MutableLiveData<Boolean> deNube = new MutableLiveData<>(Boolean.FALSE);
     private final MutableLiveData<String> doctorId = new MutableLiveData<>();
+    /** Último error al cambiar el estado de una cita. */
+    private final MutableLiveData<String> errorEstado = new MutableLiveData<>();
 
     /** Todas las citas del médico (sin filtrar por día), ya ordenadas. */
     private List<Appointment> todas = new ArrayList<>();
@@ -49,6 +63,16 @@ public class DoctorAgendaViewModel extends AndroidViewModel {
 
     public LiveData<Resource<List<Appointment>>> getAgenda() {
         return agenda;
+    }
+
+    /** Citas pendientes de atender, con las del día consultado primero. */
+    public LiveData<List<Appointment>> getPendientes() {
+        return pendientes;
+    }
+
+    /** Citas ya atendidas del día consultado. */
+    public LiveData<List<Appointment>> getAtendidas() {
+        return atendidasS;
     }
 
     public LiveData<String> getDia() {
@@ -113,6 +137,46 @@ public class DoctorAgendaViewModel extends AndroidViewModel {
         String actual = dia.getValue() != null ? dia.getValue() : hoy();
         List<Appointment> delDia = FirestoreDoctorAgendaRepository.deHoy(todas, actual);
         agenda.setValue(Resource.success(delDia));
+
+        // Dos grupos explícitos: lo que falta por atender y lo ya atendido del día.
+        // El histórico no se limita al día en el primer grupo a propósito: si quedó una
+        // cita pendiente de ayer, esconderla sería peor que mostrarla fuera de fecha.
+        pendientes.setValue(FirestoreDoctorAgendaRepository.pendientes(todas, actual));
+        atendidasS.setValue(FirestoreDoctorAgendaRepository.atendidas(todas, actual));
+    }
+
+    /**
+     * Marca una cita como atendida o como no acudida.
+     * <p>
+     * Se actualiza primero la copia en memoria para que la lista responda al instante, y
+     * después se confirma contra Firestore. Si el servidor falla, se recarga la agenda:
+     * es preferible un parpadeo a dejar en pantalla un estado que no es real.
+     */
+    public void cambiarEstado(@NonNull Appointment cita, @NonNull AppointmentStatus nuevo) {
+        repositorio.cambiarEstado(cita, nuevo,
+                new FirestoreDoctorAgendaRepository.EstadoCallback() {
+                    @Override
+                    public void onOk() {
+                        cita.setStatus(nuevo);
+                        publicarDelDia();
+                    }
+
+                    @Override
+                    public void onError(@NonNull String mensaje) {
+                        errorEstado.setValue(mensaje);
+                        cargar();
+                    }
+                });
+    }
+
+    /** Último error al cambiar el estado (la vista lo consume una sola vez). */
+    public LiveData<String> getErrorEstado() {
+        return errorEstado;
+    }
+
+    /** Consume el error para que no se repita al rotar la pantalla. */
+    public void limpiarErrorEstado() {
+        errorEstado.setValue(null);
     }
 
     /** Número de citas activas (no canceladas) de hoy. Útil para la cabecera. */

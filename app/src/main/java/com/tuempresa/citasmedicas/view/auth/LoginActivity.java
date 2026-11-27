@@ -34,14 +34,18 @@ import com.tuempresa.citasmedicas.viewmodel.AuthViewModel;
 public class LoginActivity extends AppCompatActivity {
 
     private TextInputLayout tilName, tilLastName, tilAge, tilPhone, tilBloodType,
-            tilInsurance, tilAllergies;
+            tilInsurance, tilAllergies, tilEspecialidad;
     private TextInputEditText etName, etLastName, etAge, etPhone, etBloodType,
             etInsurance, etAllergies, etEmail, etPassword;
-    private MaterialButton btnSubmit;
+    private MaterialButton btnSubmit, btnTipoPaciente, btnTipoMedico;
     private ProgressBar progressBar;
-    private TextView tvToggle, tvError;
+    private TextView tvToggle, tvError, tvTipoCuentaAyuda;
+    private View groupTipoCuenta;
+    private com.google.android.material.textfield.MaterialAutoCompleteTextView acEspecialidad;
 
     private boolean isRegisterMode = false;
+    /** {@code true} si en el registro se ha elegido «Médico». */
+    private boolean tipoMedico = false;
     private AuthViewModel viewModel;
 
     @Override
@@ -55,7 +59,60 @@ public class LoginActivity extends AppCompatActivity {
         btnSubmit.setOnClickListener(v -> submit());
         tvToggle.setOnClickListener(v -> toggleMode());
 
+        configurarTipoCuenta();
+
         observeViewModel();
+    }
+
+    /**
+     * Selector «Paciente / Médico» del registro.
+     * <p>
+     * <b>Qué decide y qué no.</b> No da el rol: eso lo resuelve Firestore al iniciar
+     * sesión. Lo que hace es dos cosas prácticas:
+     * <ul>
+     *   <li>Mostrar la especialidad, que es el dato mínimo de la ficha de médico.</li>
+     *   <li>Intentar vincular (o crear) la ficha del médico justo después del registro,
+     *       para que no tenga que cerrar sesión y volver a entrar.</li>
+     * </ul>
+     */
+    private void configurarTipoCuenta() {
+        if (groupTipoCuenta == null) {
+            return;
+        }
+        btnTipoPaciente.setChecked(!tipoMedico);
+        btnTipoMedico.setChecked(tipoMedico);
+        actualizarTipoCuenta(tipoMedico);
+
+        btnTipoPaciente.setOnClickListener(v -> actualizarTipoCuenta(false));
+        btnTipoMedico.setOnClickListener(v -> actualizarTipoCuenta(true));
+
+        acEspecialidad.setSimpleItems(new String[]{
+                getString(R.string.specialty_general), "Cardiología", "Pediatría",
+                "Dermatología", "Ginecología", "Traumatología", "Neurología", "Psiquiatría"
+        });
+    }
+
+    /** Aplica la elección de tipo de cuenta a la visibilidad de los campos. */
+    private void actualizarTipoCuenta(boolean medico) {
+        tipoMedico = medico;
+        if (tvTipoCuentaAyuda != null) {
+            tvTipoCuentaAyuda.setText(medico
+                    ? R.string.registro_ayuda_medico
+                    : R.string.registro_ayuda_paciente);
+        }
+        if (tilEspecialidad != null) {
+            tilEspecialidad.setVisibility(medico ? View.VISIBLE : View.GONE);
+        }
+        // Los datos clínicos (sangre, seguro, alergias) son del expediente del paciente:
+        // a un médico no se le piden, pero el teléfono sí (para su ficha de contacto).
+        for (TextInputLayout campo : new TextInputLayout[]{
+                tilBloodType, tilInsurance, tilAllergies}) {
+            if (campo != null) {
+                campo.setVisibility(
+                        isRegisterMode && !medico ? View.VISIBLE : View.GONE);
+            }
+        }
+        hideError();
     }
 
     private void bindViews() {
@@ -79,6 +136,12 @@ public class LoginActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         tvToggle = findViewById(R.id.tvToggle);
         tvError = findViewById(R.id.tvError);
+        groupTipoCuenta = findViewById(R.id.groupTipoCuenta);
+        btnTipoPaciente = findViewById(R.id.btnTipoPaciente);
+        btnTipoMedico = findViewById(R.id.btnTipoMedico);
+        tvTipoCuentaAyuda = findViewById(R.id.tvTipoCuentaAyuda);
+        tilEspecialidad = findViewById(R.id.tilEspecialidad);
+        acEspecialidad = findViewById(R.id.acEspecialidad);
     }
 
     /** Campos que sólo existen en modo registro. */
@@ -93,6 +156,24 @@ public class LoginActivity extends AppCompatActivity {
         for (TextInputLayout campo : camposDeRegistro()) {
             if (campo != null) {
                 campo.setVisibility(visibilidad);
+            }
+        }
+        if (groupTipoCuenta != null) {
+            groupTipoCuenta.setVisibility(visibilidad);
+        }
+        // Al volver al login se ocultan especialidad y datos clínicos: en el login no se
+        // elige nada, el rol lo resuelve Firestore.
+        if (isRegisterMode) {
+            actualizarTipoCuenta(tipoMedico);
+        } else {
+            if (tilEspecialidad != null) {
+                tilEspecialidad.setVisibility(View.GONE);
+            }
+            for (TextInputLayout campo : new TextInputLayout[]{
+                    tilBloodType, tilInsurance, tilAllergies}) {
+                if (campo != null) {
+                    campo.setVisibility(View.GONE);
+                }
             }
         }
         btnSubmit.setText(isRegisterMode ? R.string.register_button : R.string.login_button);
@@ -194,6 +275,35 @@ public class LoginActivity extends AppCompatActivity {
 
         final SessionManager session = SessionManager.getInstance(this);
         final String uid = user.getId();
+
+        // Si acaba de registrarse eligiendo «Médico», se intenta vincular (o crear) su
+        // ficha antes de resolver el rol: así entra directamente en su agenda.
+        if (isRegisterMode && tipoMedico) {
+            setLoading(true);
+            String especialidad = acEspecialidad != null && acEspecialidad.getText() != null
+                    ? acEspecialidad.getText().toString().trim() : "";
+            viewModel.vincularMedicoRecienRegistrado(user, especialidad,
+                    (vinculado, doctorId) -> {
+                        setLoading(false);
+                        if (!vinculado) {
+                            // La cuenta existe y es válida, pero no hay ficha: se entra
+                            // como paciente y se explica qué falta. No se bloquea.
+                            Toast.makeText(LoginActivity.this,
+                                    R.string.registro_medico_no_invitado,
+                                    Toast.LENGTH_LONG).show();
+                            Navigator.navigateClearingStack(LoginActivity.this,
+                                    new Routes.Main(Routes.Tab.DOCTORS));
+                            return;
+                        }
+                        Toast.makeText(LoginActivity.this,
+                                getString(R.string.registro_medico_vinculado, doctorId),
+                                Toast.LENGTH_SHORT).show();
+                        Navigator.navigateClearingStack(LoginActivity.this,
+                                new Routes.Main(Routes.Tab.AGENDA));
+                    });
+            return;
+        }
+
         com.tuempresa.citasmedicas.data.firebase.FirestoreUserRepository roles =
                 new com.tuempresa.citasmedicas.data.firebase.FirestoreUserRepository(this);
 

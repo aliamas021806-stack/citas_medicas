@@ -16,6 +16,20 @@
     <string name="login_button">Iniciar sesión</string>
     <string name="register_button">Crear cuenta</string>
     <string name="toggle_register">¿No tienes cuenta? Regístrate</string>
+
+    <!-- Tipo de cuenta en el registro. -->
+    <string name="registro_tipo_cuenta">¿Qué tipo de cuenta estás creando?</string>
+    <string name="registro_soy_paciente">Paciente</string>
+    <string name="registro_soy_medico">Médico</string>
+    <string name="registro_ayuda_paciente">Verás Doctores, Mis Citas y Perfil. Podrás reservar citas.</string>
+    <string name="registro_ayuda_medico">Verás Mi Agenda y Perfil. Tu cuenta se vinculará a la ficha
+        que el administrador haya creado con este mismo correo.</string>
+    <string name="registro_especialidad_hint">Especialidad</string>
+    <string name="specialty_general">Medicina General</string>
+    <string name="registro_medico_no_invitado">Tu cuenta se ha creado, pero no hay ninguna ficha de
+        médico con este correo. Entrarás como paciente: pide al administrador que te dé de alta
+        con este mismo correo y vuelve a iniciar sesión.</string>
+    <string name="registro_medico_vinculado">Cuenta de médico vinculada a la ficha %1$s</string>
     <string name="toggle_login">¿Ya tienes cuenta? Inicia sesión</string>
     <string name="logout">Cerrar sesión</string>
     <string name="login_icon">➕</string>
@@ -79,6 +93,8 @@
     <string name="status_confirmed">Confirmada</string>
     <string name="status_cancelled">Cancelada</string>
     <string name="status_pending">Pendiente</string>
+    <string name="status_attended">Atendida</string>
+    <string name="status_no_show">No acudió</string>
 
     <!-- Perfil -->
     <string name="profile_title">Mi Perfil</string>
@@ -129,6 +145,16 @@
     <string name="agenda_subtitle_local">Sin conexión: mostrando las citas guardadas en este teléfono</string>
     <string name="agenda_sin_citas">No tienes citas este día</string>
     <string name="agenda_sin_citas_hint">Cuando un paciente agende contigo, aparecerá aquí automáticamente</string>
+    <!-- Secciones de la agenda: primero lo que falta por atender. -->
+    <string name="agenda_seccion_pendientes">Pendientes de atender</string>
+    <string name="agenda_seccion_atendidas">Ya atendidas</string>
+    <string name="agenda_marcar_atendida">Marcar como atendida</string>
+    <string name="agenda_marcar_no_show">El paciente no acudió</string>
+    <string name="agenda_atendida_ok">Cita marcada como atendida</string>
+    <string name="agenda_no_show_ok">Cita marcada como no atendida</string>
+    <string name="agenda_error_estado">No se pudo cambiar el estado de la cita</string>
+    <string name="agenda_todas_atendidas">No queda nada pendiente hoy</string>
+    <string name="agenda_todas_atendidas_hint">Todas las citas de este día están atendidas</string>
     <string name="agenda_dia_anterior">&#8592;</string>
     <string name="agenda_dia_siguiente">&#8594;</string>
     <string name="agenda_volver_hoy">Volver a hoy</string>

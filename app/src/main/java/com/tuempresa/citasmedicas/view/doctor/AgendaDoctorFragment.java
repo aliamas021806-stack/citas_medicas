@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -22,6 +23,7 @@ import com.tuempresa.citasmedicas.model.AppointmentStatus;
 import com.tuempresa.citasmedicas.util.Resource;
 import com.tuempresa.citasmedicas.viewmodel.DoctorAgendaViewModel;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -66,7 +68,22 @@ public class AgendaDoctorFragment extends Fragment {
         tvEmptyHint = view.findViewById(R.id.tvEmptyHint);
         btnReintentar = view.findViewById(R.id.btnReintentar);
 
-        adapter = new AgendaDoctorAdapter();
+        adapter = new AgendaDoctorAdapter(
+                getString(R.string.agenda_seccion_pendientes),
+                getString(R.string.agenda_seccion_atendidas),
+                new AgendaDoctorAdapter.OnCitaAccion() {
+                    @Override
+                    public void onMarcarAtendida(@NonNull Appointment cita) {
+                        viewModel.cambiarEstado(cita, AppointmentStatus.ATTENDED);
+                        avisar(R.string.agenda_atendida_ok);
+                    }
+
+                    @Override
+                    public void onMarcarNoShow(@NonNull Appointment cita) {
+                        viewModel.cambiarEstado(cita, AppointmentStatus.NO_SHOW);
+                        avisar(R.string.agenda_no_show_ok);
+                    }
+                });
         rvAgenda.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvAgenda.setAdapter(adapter);
 
@@ -99,7 +116,84 @@ public class AgendaDoctorFragment extends Fragment {
         viewModel.getDia().observe(getViewLifecycleOwner(), this::renderDia);
         viewModel.getDeNube().observe(getViewLifecycleOwner(), this::renderOrigen);
 
+        // Las dos secciones se pintan juntas: cada vez que cambia una de las dos listas
+        // se vuelve a montar la pantalla completa, para que la cabecera de sección
+        // aparezca y desaparezca con el contenido real.
+        viewModel.getPendientes().observe(getViewLifecycleOwner(), p -> pintarSecciones());
+        viewModel.getAtendidas().observe(getViewLifecycleOwner(), a -> pintarSecciones());
+
+        viewModel.getErrorEstado().observe(getViewLifecycleOwner(), mensaje -> {
+            if (mensaje != null && !mensaje.trim().isEmpty()) {
+                Toast.makeText(requireContext(), mensaje, Toast.LENGTH_LONG).show();
+                viewModel.limpiarErrorEstado();
+            }
+        });
+
         viewModel.cargar();
+    }
+
+    /**
+     * Pinta las dos secciones a partir de los LiveData del ViewModel.
+     * <p>
+     * Se leen los dos valores actuales en lugar de recibir uno por parámetro porque las
+     * secciones deben dibujarse siempre juntas: pintar sólo la que cambió dejaría una
+     * cabecera huérfana o una tarjeta duplicada.
+     */
+    private void pintarSecciones() {
+        List<Appointment> pendientes = viewModel.getPendientes().getValue();
+        List<Appointment> atendidas = viewModel.getAtendidas().getValue();
+        if (pendientes == null) {
+            pendientes = new ArrayList<>();
+        }
+        if (atendidas == null) {
+            atendidas = new ArrayList<>();
+        }
+
+        if (progressBar != null) {
+            progressBar.setVisibility(View.GONE);
+        }
+        if (btnReintentar != null) {
+            btnReintentar.setVisibility(View.GONE);
+        }
+
+        boolean vacio = pendientes.isEmpty() && atendidas.isEmpty();
+        if (vacio) {
+            adapter.submit(new ArrayList<>(), new ArrayList<>());
+            if (rvAgenda != null) {
+                rvAgenda.setVisibility(View.GONE);
+            }
+            if (emptyState != null) {
+                emptyState.setVisibility(View.VISIBLE);
+            }
+            if (tvEmptyTitle != null) {
+                tvEmptyTitle.setText(R.string.agenda_sin_citas);
+            }
+            if (tvEmptyHint != null) {
+                tvEmptyHint.setVisibility(View.VISIBLE);
+                tvEmptyHint.setText(R.string.agenda_sin_citas_hint);
+            }
+            return;
+        }
+
+        if (emptyState != null) {
+            emptyState.setVisibility(View.GONE);
+        }
+        if (rvAgenda != null) {
+            rvAgenda.setVisibility(View.VISIBLE);
+        }
+        adapter.submit(pendientes, atendidas);
+
+        if (tvSummary != null) {
+            tvSummary.setText(getResources().getQuantityString(R.plurals.agenda_resumen,
+                    pendientes.size(), pendientes.size(), pendientes.size() + atendidas.size()));
+        }
+    }
+
+    /** Aviso breve de que la acción se ha aplicado. */
+    private void avisar(int stringRes) {
+        if (isAdded()) {
+            Toast.makeText(requireContext(), stringRes, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void renderDia(@Nullable String dia) {
@@ -161,7 +255,7 @@ public class AgendaDoctorFragment extends Fragment {
         if (rvAgenda != null) {
             rvAgenda.setVisibility(View.GONE);
         }
-        adapter.submitList(null);
+        adapter.submit(new ArrayList<>(), new ArrayList<>());
         if (emptyState != null) {
             emptyState.setVisibility(View.VISIBLE);
         }
@@ -181,47 +275,8 @@ public class AgendaDoctorFragment extends Fragment {
         if (progressBar != null) {
             progressBar.setVisibility(View.GONE);
         }
-        if (btnReintentar != null) {
-            btnReintentar.setVisibility(View.GONE);
-        }
-        if (tvEmptyHint != null) {
-            tvEmptyHint.setVisibility(View.VISIBLE);
-        }
-
-        if (citas == null || citas.isEmpty()) {
-            adapter.submitList(null);
-            if (rvAgenda != null) {
-                rvAgenda.setVisibility(View.GONE);
-            }
-            if (emptyState != null) {
-                emptyState.setVisibility(View.VISIBLE);
-            }
-            if (tvEmptyTitle != null) {
-                tvEmptyTitle.setText(R.string.agenda_sin_citas);
-            }
-            if (tvEmptyHint != null) {
-                tvEmptyHint.setText(R.string.agenda_sin_citas_hint);
-            }
-            return;
-        }
-
-        if (emptyState != null) {
-            emptyState.setVisibility(View.GONE);
-        }
-        if (rvAgenda != null) {
-            rvAgenda.setVisibility(View.VISIBLE);
-        }
-        adapter.submitList(citas);
-
-        if (tvSummary != null) {
-            int activas = 0;
-            for (Appointment a : citas) {
-                if (a.getStatus() != AppointmentStatus.CANCELLED) {
-                    activas++;
-                }
-            }
-            tvSummary.setText(getResources().getQuantityString(
-                    R.plurals.agenda_resumen, activas, activas, citas.size()));
-        }
+        // El contenido real lo pinta pintarSecciones(), que es quien conoce las dos
+        // secciones. Aquí sólo se deja constancia de que la carga terminó.
+        pintarSecciones();
     }
 }

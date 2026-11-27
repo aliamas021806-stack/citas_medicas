@@ -11,7 +11,9 @@ import com.tuempresa.citasmedicas.util.AppointmentMapper;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Response;
@@ -138,6 +140,96 @@ public class FirestoreDoctorAgendaRepository {
         return resultado;
     }
 
+    // ───────────────────────── Cambio de estado ─────────────────────────
+
+    /** Resultado del cambio de estado de una cita. */
+    public interface EstadoCallback {
+        void onOk();
+
+        void onError(@NonNull String mensaje);
+    }
+
+    /**
+     * Marca una cita como atendida (o como no acudió).
+     * <p>
+     * <b>Sólo el estado.</b> Se envía un {@code PATCH} con {@code updateMask} limitado
+     * a {@code status}: sin la máscara, Firestore reemplazaría el documento entero y se
+     * perderían el paciente, la fecha y el motivo. La regla de seguridad también lo
+     * exige así, sólo permite cambiar {@code status} y {@code reason}.
+     * <p>
+     * Si la cita no tiene documento remoto (se agendó sin red y nunca subió), se
+     * actualiza sólo en Room: el estado local sigue siendo útil para el consultorio.
+     */
+    public void cambiarEstado(@NonNull Appointment cita, @NonNull AppointmentStatus nuevo,
+                              @NonNull final EstadoCallback callback) {
+        final String remoteId = cita.getRemoteId();
+        final boolean hayRemoto = remoteId != null && !remoteId.trim().isEmpty();
+
+        if (!hayRemoto) {
+            actualizarEstadoLocal(cita, nuevo, callback);
+            return;
+        }
+
+        Map<String, FirestoreApi.Value> campos = new HashMap<>();
+        campos.put("status", FirestoreApi.ofString(nuevo.getValue()));
+
+        FirestoreApi.FirestoreDocument parcial = new FirestoreApi.FirestoreDocument();
+        parcial.fields = campos;
+
+        api.updateDocument(FirebaseConfig.COLLECTION_APPOINTMENTS, remoteId,
+                        Collections.singletonList("status"), parcial)
+                .enqueue(new retrofit2.Callback<FirestoreApi.FirestoreDocument>() {
+                    @Override
+                    public void onResponse(
+                            @NonNull Call<FirestoreApi.FirestoreDocument> call,
+                            @NonNull Response<FirestoreApi.FirestoreDocument> response) {
+                        if (response.isSuccessful()) {
+                            actualizarEstadoLocal(cita, nuevo, callback);
+                        } else {
+                            android.util.Log.w(TAG, "No se pudo marcar la cita '" + remoteId
+                                    + "' como " + nuevo.getValue() + ": "
+                                    + FirebaseErrors.describirErrorFirestore(
+                                    response.code(), FirebaseErrors.cuerpoDeError(response)));
+                            callback.onError("Firestore rechazó el cambio (HTTP "
+                                    + response.code() + ")");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<FirestoreApi.FirestoreDocument> call,
+                                          @NonNull Throwable t) {
+                        android.util.Log.w(TAG, "Sin conexión al cambiar el estado de '"
+                                + remoteId + "': " + t.getMessage());
+                        callback.onError("Sin conexión: el cambio no se guardó");
+                    }
+                });
+    }
+
+    /** Refleja el estado en Room, que es la caché local del consultorio. */
+    private void actualizarEstadoLocal(@NonNull Appointment cita,
+                                       @NonNull AppointmentStatus nuevo,
+                                       @NonNull final EstadoCallback callback) {
+        final long idLocal;
+        try {
+            idLocal = Long.parseLong(cita.getId() != null ? cita.getId() : "");
+        } catch (NumberFormatException e) {
+            // El id visible es el remoto: no hay fila local que tocar, pero la nube ya
+            // está actualizada, así que la operación se da por buena.
+            callback.onOk();
+            return;
+        }
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            try {
+                db.appointmentDao().updateStatus(idLocal, nuevo.getValue());
+                callback.onOk();
+            } catch (RuntimeException e) {
+                android.util.Log.w(TAG, "No se pudo guardar el estado en Room: "
+                        + e.getMessage());
+                callback.onOk();
+            }
+        });
+    }
+
     // ───────────────────────── Utilidades ─────────────────────────
 
     /**
@@ -189,17 +281,7 @@ public class FirestoreDoctorAgendaRepository {
      * mientras no existe).
      */
     static void ordenarPorFecha(@NonNull List<Appointment> citas) {
-        Collections.sort(citas, (a, b) -> {
-            String fa = a.getDate() != null ? a.getDate() : "";
-            String fb = b.getDate() != null ? b.getDate() : "";
-            int cmp = fa.compareTo(fb);
-            if (cmp != 0) {
-                return cmp;
-            }
-            String ta = a.getTime() != null ? a.getTime() : "";
-            String tb = b.getTime() != null ? b.getTime() : "";
-            return ta.compareTo(tb);
-        });
+        Collections.sort(citas, FirestoreDoctorAgendaRepository::compararFechaYHora);
     }
 
     /**
@@ -229,5 +311,76 @@ public class FirestoreDoctorAgendaRepository {
             }
         }
         return resultado;
+    }
+
+    /**
+     * Citas que <b>faltan por atender</b>, con las de hoy primero.
+     * <p>
+     * Es el grupo que el médico necesita ver al abrir la agenda, así que se ordena por
+     * prioridad y no sólo por hora:
+     * <ol>
+     *   <li>Primero las del día que se está mirando.</li>
+     *   <li>Dentro de ese día, por hora ascendente: la siguiente consulta es la que
+     *       apremia.</li>
+     * </ol>
+     * Se incluye {@link AppointmentStatus#NO_SHOW} porque una inasistencia también
+     * exige una decisión (reprogramar o cerrar el hueco).
+     */
+    @NonNull
+    public static List<Appointment> pendientes(@NonNull List<Appointment> citas,
+                                               @NonNull String dia) {
+        List<Appointment> resultado = new ArrayList<>();
+        for (Appointment a : citas) {
+            AppointmentStatus estado = a.getStatus() != null
+                    ? a.getStatus() : AppointmentStatus.CONFIRMED;
+            if (estado.esPendiente()) {
+                resultado.add(a);
+            }
+        }
+        Collections.sort(resultado, (a, b) -> {
+            // El día consultado va primero; el resto mantiene el orden cronológico.
+            boolean aEsDeHoy = dia.equals(a.getDate());
+            boolean bEsDeHoy = dia.equals(b.getDate());
+            if (aEsDeHoy != bEsDeHoy) {
+                return aEsDeHoy ? -1 : 1;
+            }
+            return compararFechaYHora(a, b);
+        });
+        return resultado;
+    }
+
+    /**
+     * Citas <b>ya atendidas</b> del día consultado, ordenadas por hora.
+     * <p>
+     * Se mantiene el histórico del día pero en un grupo aparte, para que no desplace a
+     * lo que queda por hacer. Firestore no admite la consulta por estado sin un índice
+     * compuesto, así que el filtro se hace en memoria (igual que la fecha).
+     */
+    @NonNull
+    public static List<Appointment> atendidas(@NonNull List<Appointment> citas,
+                                              @NonNull String dia) {
+        List<Appointment> resultado = new ArrayList<>();
+        for (Appointment a : citas) {
+            AppointmentStatus estado = a.getStatus() != null
+                    ? a.getStatus() : AppointmentStatus.CONFIRMED;
+            if (estado.esAtendida() && dia.equals(a.getDate())) {
+                resultado.add(a);
+            }
+        }
+        Collections.sort(resultado, FirestoreDoctorAgendaRepository::compararFechaYHora);
+        return resultado;
+    }
+
+    /** Compara por fecha y, si coincide, por hora. Orden cronológico ascendente. */
+    private static int compararFechaYHora(@NonNull Appointment a, @NonNull Appointment b) {
+        String fa = a.getDate() != null ? a.getDate() : "";
+        String fb = b.getDate() != null ? b.getDate() : "";
+        int cmp = fa.compareTo(fb);
+        if (cmp != 0) {
+            return cmp;
+        }
+        String ta = a.getTime() != null ? a.getTime() : "";
+        String tb = b.getTime() != null ? b.getTime() : "";
+        return ta.compareTo(tb);
     }
 }

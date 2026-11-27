@@ -16,6 +16,10 @@
     <color name="status_confirmed">#14917A</color>
     <color name="status_cancelled">#D64545</color>
     <color name="status_pending">#E0A106</color>
+    <!-- Atendida: verde apagado, para que no compita con las pendientes. -->
+    <color name="status_attended">#4E7B72</color>
+    <!-- No acudió: gris, porque ya no requiere atención inmediata. -->
+    <color name="status_no_show">#8A97A0</color>
 
     <color name="white">#FFFFFF</color>
     <color name="error">#D64545</color>

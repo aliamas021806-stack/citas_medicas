@@ -80,6 +80,85 @@
                         android:inputType="textPersonName" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!--
+                  Tipo de cuenta. Sólo aparece en modo registro: al entrar no se elige
+                  nada, el rol lo resuelve Firestore. No decide el rol por sí solo (nadie
+                  puede autoproclamarse médico), sirve para dos cosas:
+                    1. Explicar al usuario qué está creando y qué pestañas verá.
+                    2. Pedir la especialidad cuando es médico, para que el registro pueda
+                       crear su ficha en 'doctors' vinculada a su correo.
+                -->
+                <LinearLayout
+                    android:id="@+id/groupTipoCuenta"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_sm"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/registro_tipo_cuenta"
+                        android:textAppearance="@style/TextAppearance.CitasMedicas.Subtitle"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/toggleTipoCuenta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_xs"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTipoPaciente"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/registro_soy_paciente" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTipoMedico"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/registro_soy_medico" />
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                    <TextView
+                        android:id="@+id/tvTipoCuentaAyuda"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_xs"
+                        android:text="@string/registro_ayuda_paciente"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!--
+                  Especialidad: sólo la piden los médicos, porque es el dato mínimo que
+                  necesita la ficha de 'doctors' para que su agenda funcione.
+                -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilEspecialidad"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_md"
+                    android:hint="@string/registro_especialidad_hint"
+                    android:visibility="gone">
+
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/acEspecialidad"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilLastName"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
