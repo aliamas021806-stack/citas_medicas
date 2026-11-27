@@ -30,8 +30,7 @@ android {
     }
 
     signingConfigs {
-        release {
-            if (hasReleaseSigning) {
+        release {            if (hasReleaseSigning) {
                 storeFile rootProject.file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
@@ -72,6 +71,20 @@ android {
         // Necesario para BuildConfig: expone la configuracion de Firebase
         // (leida de local.properties) como constantes de Java.
         buildConfig true
+    }
+
+    // ── Nombre del APK ──────────────────────────────────────────────────────
+    // Los enlaces del README y de PROBAR_APP apuntan a
+    //   /releases/download/vX.Y/CitasMedicas-vX.Y.apk
+    // Por defecto AGP genera "app-release.apk", así que la release publicaba un
+    // archivo con otro nombre y los enlaces daban 404. Aquí se le pone el nombre
+    // que esperan esos enlaces, tomado de versionName: un solo sitio que cambiar.
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            if (variant.buildType.name == 'release') {
+                outputFileName = "CitasMedicas-v${variant.versionName}.apk"
+            }
+        }
     }
 
     lint {

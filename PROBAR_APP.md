@@ -168,10 +168,10 @@ Si quieres comprobar que el archivo descargado es exactamente el que generó la 
 **SHA-256** (APK de la release `v6.2`):
 
 ```
-cc4692c2c2bc3396f58447607c5456990696434a90d5428a3b0ea77ce0fde634
+497dda5d608f44cb8e390058ad9e8a761de9453f71ca894e1323ef6edd3a5189
 ```
 
-Tamaño exacto: **5 742 192 bytes** (5.5 MB).
+Tamaño exacto: **5 742 195 bytes** (5.5 MB).
 
 Comprobar en Linux/macOS:
 

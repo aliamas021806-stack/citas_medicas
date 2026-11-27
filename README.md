@@ -8,7 +8,7 @@
 >
 > ## 📲 [⬇️ Descargar CitasMedicas-v6.2.apk](https://github.com/aliamas021806-stack/citas_medicas/releases/download/v6.2/CitasMedicas-v6.2.apk)
 >
-> - **Android 7.0+** · 5.5 MB (5 742 192 bytes) · firmado y listo para instalar
+> - **Android 7.0+** · 5.5 MB (5 742 195 bytes) · firmado y listo para instalar
 > - ✅ **Esta es la versión con Firebase conectado.** La v3.0 es anterior a la integración: no sincroniza nada.
 > - **Primero pulsa «Registro»** y crea tu cuenta (nombre, edad, correo y contraseña de **6+ caracteres**).
 >   Después entra con ese correo. Con Firebase activo el login **valida de verdad**: un correo
@@ -163,11 +163,11 @@ Get-FileHash CitasMedicas-v6.2.apk -Algorithm SHA256
 shasum -a 256 CitasMedicas-v6.2.apk
 ```
 
-El resultado debe empezar por `4526dac5…`.
+El resultado debe empezar por `497dda5d…`.
 
-> ⚠️ **Ojo con versiones anteriores.** El APK de la **v6.0** pesaba 5 704 849 bytes
-> (hash `89350892…`) y el de la **v5.0**, 5 659 699 bytes. Si tu archivo pesa
-> exactamente **5 727 949 bytes** y su hash empieza por `4526dac5…`, **es la v6.2**.
+> ⚠️ **Ojo con versiones anteriores.** El APK de la **v6.1** pesaba 5 727 949 bytes
+> (hash `4526dac5…`). Si tu archivo pesa exactamente **5 742 195 bytes** y su hash
+> empieza por `497dda5d…`, **es la v6.2**.
 > Compara siempre el **tamaño y el hash juntos**, y confirma dentro de la app
 > (Perfil → pestaña «Médicos» si eres admin, o «Mi Agenda» si eres médico).
 
@@ -338,11 +338,11 @@ limpio con **JDK 21** y **Android SDK 34**:
 | Comprobación | Resultado |
 |---|---|
 | Compilación (`assembleDebug` / `assembleRelease` / `bundleRelease`) | ✅ **BUILD SUCCESSFUL** |
-| Pruebas automatizadas | ✅ **291 tests · 0 fallos · 0 errores** |
+| Pruebas automatizadas | ✅ **294 tests · 0 fallos · 0 errores** |
 | Android Lint | ✅ **0 errores** (sólo avisos de recursos sin usar y de layouts de tablet) |
 | Archivos Kotlin (`.kt` / `.kts`) | ✅ **0** — proyecto 100% Java |
-| APK release | 5.5 MB (5 727 949 bytes) · firmado · instalable |
-| AAB release | 4.9 MB (5 106 389 bytes) |
+| APK release | 5.5 MB (5 742 195 bytes) · firmado · instalable |
+| AAB release | 4.9 MB (5 115 268 bytes) |
 
 ### 🧪 Pruebas incluidas
 
