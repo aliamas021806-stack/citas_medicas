@@ -48,6 +48,10 @@ public final class FirestoreMapper {
         d.setYearsExperience((int) number(f, "yearsExperience", 0d));
         d.setAge((int) number(f, "age", 0d));
         d.setConsultationFee(number(f, "consultationFee", 0d));
+        // El hospital/clínica se escribía al dar de alta al médico, pero no se leía
+        // aquí: se perdía entre Firestore y la pantalla sin que nadie lo notara.
+        d.setHospital(text(f, "hospital", ""));
+        d.setPhone(text(f, "phone", ""));
         // Vinculación con una cuenta: 'email' es la invitación que escribe el
         // administrador y 'userId' el uid una vez que el médico entra por primera vez.
         d.setEmail(text(f, "email", ""));

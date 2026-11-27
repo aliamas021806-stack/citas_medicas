@@ -190,6 +190,12 @@ public class FirebaseAuthRepository implements IAuthRepository {
      * <p>
      * El nombre: en el registro lo pone el usuario; en el login Firebase no lo
      * devuelve, así que se deriva del correo igual que hacía la versión mock.
+     * <p>
+     * <b>La edad no se inventa.</b> Antes, si la petición no traía edad (siempre en el
+     * login, porque el formulario de acceso sólo pide correo y contraseña), se ponía
+     * {@code 30}. Ese 30 se guardaba en la sesión y acababa sobrescribiendo la edad real
+     * de la ficha del médico, que era 35. Ahora se deja {@code 0} = «sin dato» y el
+     * perfil lo completa leyendo Firestore.
      */
     @NonNull
     private User toUser(@NonNull FirebaseAuthApi.AuthResponse response,
@@ -204,7 +210,7 @@ public class FirebaseAuthRepository implements IAuthRepository {
         } else {
             name = derivarNombreDeEmail(email);
         }
-        int age = request.getAge() > 0 ? request.getAge() : 30;
+        int age = request.getAge() > 0 ? request.getAge() : 0;
         // Firebase identifica al usuario con localId: se usa como id de sesión.
         String id = response.localId != null && !response.localId.isEmpty()
                 ? response.localId : "user_01";

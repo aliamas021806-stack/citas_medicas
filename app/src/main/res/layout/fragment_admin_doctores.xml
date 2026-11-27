@@ -86,20 +86,27 @@
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!--
+              Especialidad como LISTA, no como texto libre.
+              
+              Con texto libre el administrador podía escribir "podologia" y la ficha
+              quedaba con specialtyId="podologia", que no existe en la colección
+              `specialties`. Resultado: el médico no aparecía al filtrar por ninguna
+              especialidad del catálogo, porque su id no coincidía con ninguno.
+            -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilAdminEspecialidad"
-                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_sm"
                 android:hint="@string/admin_specialty_hint">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etAdminEspecialidad"
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/acAdminEspecialidad"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:maxLines="1" />
+                    android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout

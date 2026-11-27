@@ -236,12 +236,26 @@ public class AgendaDoctorFragment extends Fragment {
                 : texto);
     }
 
+    /**
+     * Explica de dónde salen las citas.
+     * <p>
+     * <b>Por qué no basta con «sin conexión».</b> El texto anterior decía «Sin conexión:
+     * mostrando las citas guardadas en este teléfono» siempre que la respuesta no venía
+     * de la nube. Pero eso también ocurre cuando Firestore <i>sí</i> respondió y lo hizo
+     * con un 403: no había ningún problema de red, el problema era de permisos. Decir
+     * «sin conexión» con el WiFi funcionando era desconcertante y ocultaba la causa real.
+     */
     private void renderOrigen(@Nullable Boolean deNube) {
         if (tvSummary == null || deNube == null) {
             return;
         }
-        tvSummary.setText(deNube
-                ? R.string.agenda_subtitle
+        if (Boolean.TRUE.equals(deNube)) {
+            tvSummary.setText(R.string.agenda_subtitle);
+            return;
+        }
+        // Si hay aviso de lectura, el problema no es la red: no se dice «sin conexión».
+        tvSummary.setText(avisoLectura != null
+                ? R.string.agenda_subtitle_sin_permiso
                 : R.string.agenda_subtitle_local);
     }
 

@@ -38,8 +38,17 @@ public class AdminDoctoresFragment extends Fragment {
     private AdminDoctoresViewModel viewModel;
     private AdminMedicoAdapter adapter;
 
-    private TextInputEditText etNombre, etEmail, etEspecialidad, etHospital, etEdad,
+    private TextInputEditText etNombre, etEmail, etHospital, etEdad,
             etAnios, etTarifa, etBio;
+    /**
+     * Especialidad: lista desplegable con el catálogo real, no texto libre.
+     * <p>
+     * Con texto libre se podía escribir cualquier cosa y la ficha quedaba con un
+     * {@code specialtyId} que no existía en {@code specialties}, así que el médico no
+     * aparecía al filtrar por esa especialidad.
+     */
+    private com.google.android.material.textfield.MaterialAutoCompleteTextView
+            acEspecialidad;
     private MaterialButton btnRegistrar;
     private ProgressBar progress;
     private RecyclerView rvMedicos;
@@ -58,7 +67,7 @@ public class AdminDoctoresFragment extends Fragment {
 
         etNombre = view.findViewById(R.id.etAdminNombre);
         etEmail = view.findViewById(R.id.etAdminEmail);
-        etEspecialidad = view.findViewById(R.id.etAdminEspecialidad);
+        acEspecialidad = view.findViewById(R.id.acAdminEspecialidad);
         etHospital = view.findViewById(R.id.etAdminHospital);
         etEdad = view.findViewById(R.id.etAdminEdad);
         etAnios = view.findViewById(R.id.etAdminAnios);
@@ -76,9 +85,24 @@ public class AdminDoctoresFragment extends Fragment {
         viewModel = new ViewModelProvider(this).get(AdminDoctoresViewModel.class);
         viewModel.getMedicos().observe(getViewLifecycleOwner(), this::renderMedicos);
         viewModel.getAlta().observe(getViewLifecycleOwner(), this::renderAlta);
+        viewModel.getEspecialidades().observe(getViewLifecycleOwner(), this::renderEspecialidades);
 
         btnRegistrar.setOnClickListener(v -> registrar());
         viewModel.cargarMedicos();
+        viewModel.cargarEspecialidades();
+    }
+
+    /**
+     * Rellena el desplegable de especialidades con el catálogo real.
+     * <p>
+     * Se ofrece como sugerencia, no como imposición: si el catálogo viene vacío (sin
+     * red) el campo sigue aceptando texto, para que el alta no quede bloqueada.
+     */
+    private void renderEspecialidades(@Nullable List<String> nombres) {
+        if (acEspecialidad == null || nombres == null || nombres.isEmpty()) {
+            return;
+        }
+        acEspecialidad.setSimpleItems(nombres.toArray(new String[0]));
     }
 
     private String texto(TextInputEditText campo) {
@@ -115,7 +139,9 @@ public class AdminDoctoresFragment extends Fragment {
             aviso(getString(R.string.admin_error_email));
             return;
         }
-        String especialidad = texto(etEspecialidad);
+        String especialidad = acEspecialidad != null
+                && acEspecialidad.getText() != null
+                ? acEspecialidad.getText().toString().trim() : "";
         if (especialidad.isEmpty()) {
             aviso(getString(R.string.admin_error_especialidad));
             return;
@@ -180,12 +206,15 @@ public class AdminDoctoresFragment extends Fragment {
     }
 
     private void limpiarFormulario() {
-        TextInputEditText[] campos = {etNombre, etEmail, etEspecialidad, etHospital,
+        TextInputEditText[] campos = {etNombre, etEmail, etHospital,
                 etEdad, etAnios, etTarifa, etBio};
         for (TextInputEditText campo : campos) {
             if (campo != null) {
                 campo.setText("");
             }
+        }
+        if (acEspecialidad != null) {
+            acEspecialidad.setText("");
         }
     }
 

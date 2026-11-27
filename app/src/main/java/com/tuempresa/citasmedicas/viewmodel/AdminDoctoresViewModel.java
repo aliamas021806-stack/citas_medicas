@@ -29,6 +29,14 @@ public class AdminDoctoresViewModel extends AndroidViewModel {
 
     private final MutableLiveData<Resource<List<Doctor>>> medicos = new MutableLiveData<>();
     private final MutableLiveData<Resource<String>> alta = new MutableLiveData<>();
+    /**
+     * Catálogo de especialidades para el desplegable del alta.
+     * <p>
+     * Se ofrece la lista real (de Firestore, o el respaldo del mock) en lugar de dejar
+     * escribir texto libre: así el {@code specialtyId} de la ficha siempre existe y el
+     * médico aparece al filtrar por su especialidad.
+     */
+    private final MutableLiveData<List<String>> especialidades = new MutableLiveData<>();
 
     public AdminDoctoresViewModel(@NonNull Application application) {
         super(application);
@@ -57,6 +65,43 @@ public class AdminDoctoresViewModel extends AndroidViewModel {
             @Override
             public void onError(String message) {
                 medicos.setValue(Resource.error(message));
+            }
+        });
+    }
+
+    /** Nombres de especialidad para el desplegable del alta. */
+    public LiveData<List<String>> getEspecialidades() {
+        return especialidades;
+    }
+
+    /**
+     * Carga el catálogo de especialidades.
+     * <p>
+     * Si Firestore no responde, la lista se queda vacía y el desplegable permite
+     * escribir (MaterialAutoCompleteTextView no bloquea la entrada): así el alta no se
+     * queda bloqueada por un fallo de red, que es lo que importaba.
+     */
+    public void cargarEspecialidades() {
+        catalogo.getSpecialties(new RepositoryCallback<List<com.tuempresa.citasmedicas
+                .model.Specialty>>() {
+            @Override
+            public void onSuccess(List<com.tuempresa.citasmedicas.model.Specialty> data) {
+                java.util.List<String> nombres = new java.util.ArrayList<>();
+                if (data != null) {
+                    for (com.tuempresa.citasmedicas.model.Specialty s : data) {
+                        if (s != null && s.getName() != null
+                                && !s.getName().trim().isEmpty()) {
+                            nombres.add(s.getName().trim());
+                        }
+                    }
+                }
+                especialidades.setValue(nombres);
+            }
+
+            @Override
+            public void onError(String message) {
+                // Sin catálogo no se rompe el alta: el campo sigue admitiendo texto.
+                especialidades.setValue(new java.util.ArrayList<>());
             }
         });
     }

@@ -56,6 +56,23 @@ public class FirestoreUserRepository {
          */
         void onRole(@NonNull UserRole role, @Nullable String doctorId);
 
+        /**
+         * Igual que {@link #onRole} pero con la <b>ficha completa</b> del médico, que
+         * es de donde salen el nombre real, la edad y el teléfono.
+         * <p>
+         * <b>Por qué hacía falta.</b> Al iniciar sesión, Firebase Authentication sólo
+         * devuelve el correo: el nombre se derivaba del correo ("medico.demo01" →
+         * "Medico Demo01"), la edad se quedaba en 0 y el teléfono aparecía vacío,
+         * aunque la ficha tuviera "Ana Suárez", 35 años y un consultorio asignado. Con
+         * la ficha a mano, la sesión se rellena con los datos de verdad.
+         *
+         * @param ficha ficha del médico (nunca {@code null} si {@code role} es médico)
+         */
+        default void onRolConFicha(@NonNull UserRole role, @Nullable String doctorId,
+                                   @Nullable Doctor ficha) {
+            onRole(role, doctorId);
+        }
+
         /** No se pudo consultar: se asume paciente. */
         void onFallback(@NonNull String motivo);
     }
@@ -89,15 +106,26 @@ public class FirestoreUserRepository {
                             @NonNull Call<FirestoreApi.FirestoreDocument> call,
                             @NonNull Response<FirestoreApi.FirestoreDocument> response) {
                         Map<String, FirestoreApi.Value> campos = null;
-                        if (response.isSuccessful() && response.body() != null) {
+                        // ── 404 sí, 403 no ──
+                        // Antes cualquier respuesta que no fuese 2xx dejaba `campos` en
+                        // null, así que un error de *permisos* se interpretaba como
+                        // «esta cuenta no tiene perfil». Con esa premisa se acababa
+                        // escribiendo `role: "patient"` encima del documento de un
+                        // administrador y la app lo degradaba a paciente en cada inicio
+                        // de sesión. Ahora «no hay perfil» significa exactamente 404.
+                        boolean hayPerfil = response.isSuccessful() && response.body() != null;
+                        if (hayPerfil) {
                             campos = response.body().fields;
                         } else if (response.code() != 404) {
-                            // 403/500: las reglas no dejan leer ni el propio documento.
-                            // Se intenta igualmente el vínculo por ficha de médico.
                             android.util.Log.w(TAG, "No se pudo leer /users/" + uid
                                     + " (HTTP " + response.code() + ")");
+                            // No se sabe el rol y no se puede deducir: se entra con el
+                            // rol que ya tenga la sesión, sin escribir nada en Firestore.
+                            callback.onFallback("No se pudo leer el perfil: HTTP "
+                                    + response.code());
+                            return;
                         }
-                        resolverDoctorOHeredar(uid, email, campos, callback);
+                        resolverDoctorOHeredar(uid, email, campos, hayPerfil, callback);
                     }
 
                     @Override
@@ -109,18 +137,32 @@ public class FirestoreUserRepository {
                 });
     }
 
-    /** Segundo paso: comprueba si el rol guardado ya es admin o busca su ficha médica. */
+    /**
+     * Segundo paso: decide el rol y, si hay ficha de médico, la vincula.
+     * <p>
+     * <b>Regla de oro: al iniciar sesión no se escribe el rol.</b> Sólo se escribe la
+     * {@code doctorId} que falta, y siempre con la ficha delante. Así una cuenta
+     * <i>nunca</i> puede perder su rol por entrar (que es lo que le pasaba al
+     * administrador: cada login lo devolvía a paciente).
+     *
+     * @param hayPerfil {@code true} si {@code /users/{uid}} existe de verdad (no es un
+     *                  error de permisos ni de red)
+     */
     private void resolverDoctorOHeredar(@NonNull final String uid, @Nullable final String email,
                                         @Nullable Map<String, FirestoreApi.Value> campos,
+                                        boolean hayPerfil,
                                         @NonNull final RoleCallback callback) {
-        UserRole guardado = campos != null
+        UserRole guardado = hayPerfil
                 ? UserRole.fromValue(leerTexto(campos, "role")) : UserRole.PATIENT;
 
         if (guardado.isAdmin()) {
-            // El rol más alto no necesita ficha de médico.
-            callback.onRole(UserRole.ADMIN, leerTexto(campos, "doctorId"));
+            // El rol más alto no necesita ficha de médico y no se toca su documento:
+            // el rol admin sólo puede venir de la consola.
+            callback.onRolConFicha(UserRole.ADMIN, leerTexto(campos, "doctorId"), null);
             return;
         }
+
+        final String doctorIdGuardado = leerTexto(campos, "doctorId");
 
         api.listDocuments(FirebaseConfig.COLLECTION_DOCTORS)
                 .enqueue(new retrofit2.Callback<FirestoreApi.DocumentList>() {
@@ -129,26 +171,70 @@ public class FirestoreUserRepository {
                             @NonNull Call<FirestoreApi.DocumentList> call,
                             @NonNull Response<FirestoreApi.DocumentList> response) {
                         if (!response.isSuccessful() || response.body() == null) {
-                            callback.onRole(guardado, leerTexto(campos, "doctorId"));
+                            // No se pudo comprobar si es médico. Si la sesión ya decía
+                            // que lo era, se mantiene: degradar aquí sería el mismo
+                            // error que se está corrigiendo, sólo que por otra puerta.
+                            callback.onRole(guardado, doctorIdGuardado);
                             return;
                         }
                         List<Doctor> doctores = FirestoreMapper.toDoctors(response.body().documents);
                         Doctor mio = buscarFichaDeLaCuenta(doctores, uid, email);
                         if (mio == null) {
-                            // Ni admin ni médico: paciente con el rol ya guardado.
-                            callback.onRole(guardado, leerTexto(campos, "doctorId"));
+                            // Ni admin ni médico: es un paciente. Y si todavía no tiene
+                            // documento de rol se crea AHORA, porque sin él las reglas
+                            // no pueden identificarlo (`miRol()` devolvería ''). El rol
+                            // escrito es el que ya tenía la sesión, nunca otro.
+                            cerrarCreandoPerfilSiFalta(uid, email, !hayPerfil, guardado,
+                                    doctorIdGuardado, callback);
                             return;
                         }
+
+                        // Hay ficha: esta cuenta ES del médico. Se reclama si estaba
+                        // invitada (esa escritura va firmada con su propio correo).
                         vincularSiHaciaFalta(mio, uid);
-                        callback.onRole(UserRole.DOCTOR, mio.getId());
+
+                        boolean faltaDoctorId = doctorIdGuardado == null
+                                || doctorIdGuardado.trim().isEmpty()
+                                || !doctorIdGuardado.trim().equals(mio.getId());
+
+                        if (!hayPerfil || faltaDoctorId) {
+                            // Se completa SÓLO el perfil del médico: `role: "doctor"` y su
+                            // `doctorId`. Nunca se pasa por aquí una cuenta de admin,
+                            // porque el admin ya salió arriba.
+                            guardarPerfilDeMedico(uid, email, mio, callback);
+                            return;
+                        }
+                        // Ya estaba todo: no se escribe nada (ni una petición de más).
+                        callback.onRolConFicha(UserRole.DOCTOR, mio.getId(), mio);
                     }
 
                     @Override
                     public void onFailure(@NonNull Call<FirestoreApi.DocumentList> call,
                                           @NonNull Throwable t) {
-                        callback.onRole(guardado, leerTexto(campos, "doctorId"));
+                        // Sin red no se puede crear ni vincular nada: se entra con lo
+                        // que diga la sesión, sin sobrescribir el servidor.
+                        callback.onRole(guardado, doctorIdGuardado);
                     }
                 });
+    }
+
+    /**
+     * Termina la resolución del rol y, si la cuenta no tenía perfil, lo crea.
+     * <p>
+     * Sólo se crea cuando la lectura de {@code /users/{uid}} devolvió 404. Es importante:
+     * si se creara siempre, un administrador que escribe su documento a mano vería cómo
+     * su {@code role: "admin"} se degrada a {@code patient} en el siguiente inicio de
+     * sesión, que es exactamente el síntoma «entro como admin y me trata como paciente».
+     */
+    private void cerrarCreandoPerfilSiFalta(@NonNull String uid, @Nullable String email,
+                                            boolean sinPerfil, @NonNull UserRole rol,
+                                            @Nullable String doctorId,
+                                            @NonNull final RoleCallback callback) {
+        if (!sinPerfil) {
+            callback.onRole(rol, doctorId);
+            return;
+        }
+        asegurarPerfil(uid, email != null ? email : "", null, rol, doctorId, callback);
     }
 
     /**
@@ -267,25 +353,25 @@ public class FirestoreUserRepository {
     // ───────────────────────── Escritura del rol ─────────────────────────
 
     /**
-     * Crea el documento de rol al registrarse.
+     * Deja el perfil del médico con su rol y su {@code doctorId}, y devuelve la ficha.
      * <p>
-     * Siempre con {@code role = "patient"}: <b>nadie puede autoproclamarse</b> médico o
-     * administrador desde la app. El alta de médicos la hace un administrador.
+     * <b>Se escribe el rol porque aquí sí se sabe.</b> La ficha existe y su correo es
+     * el del token: la regla de {@code users} acepta {@code doctorId} con esa
+     * comprobación, y {@code role: "doctor"} lo único que hace es reflejar en el
+     * documento lo que ya es cierto. Lo que <b>nunca</b> ocurre es escribir
+     * {@code role} sobre una cuenta de administrador: esas salen antes de llegar aquí.
      */
-    public void crearRolPaciente(@NonNull String uid, @NonNull String email,
-                                 @NonNull String fullName,
-                                 @NonNull final RoleCallback callback) {
+    private void guardarPerfilDeMedico(@NonNull String uid, @Nullable String email,
+                                       @NonNull final Doctor ficha,
+                                       @NonNull final RoleCallback callback) {
         Map<String, FirestoreApi.Value> f = new HashMap<>();
-        f.put("role", FirestoreApi.ofString(UserRole.PATIENT.getValue()));
-        f.put("email", FirestoreApi.ofString(email));
-        f.put("fullName", FirestoreApi.ofString(fullName));
-        f.put("createdAt", FirestoreApi.ofInteger(System.currentTimeMillis()));
+        f.put("role", FirestoreApi.ofString(UserRole.DOCTOR.getValue()));
+        f.put("email", FirestoreApi.ofString(email != null ? email : ""));
+        f.put("doctorId", FirestoreApi.ofString(ficha.getId()));
 
         FirestoreApi.FirestoreDocument doc = new FirestoreApi.FirestoreDocument();
         doc.fields = f;
 
-        // PATCH con máscara: crea el documento si no existe y no pisa un rol ya
-        // asignado en los campos que no se envían.
         api.updateDocument(COLLECTION_USERS, uid,
                         new java.util.ArrayList<>(f.keySet()), doc)
                 .enqueue(new retrofit2.Callback<FirestoreApi.FirestoreDocument>() {
@@ -293,10 +379,78 @@ public class FirestoreUserRepository {
                     public void onResponse(
                             @NonNull Call<FirestoreApi.FirestoreDocument> call,
                             @NonNull Response<FirestoreApi.FirestoreDocument> response) {
-                        if (response.isSuccessful()) {
-                            callback.onRole(UserRole.PATIENT, null);
+                        // Aunque falle la escritura, la ficha ya identifica al médico:
+                        // se entra igual y la próxima vez se reintenta.
+                        if (!response.isSuccessful() && response.code() != 403) {
+                            android.util.Log.w(TAG, "No se pudo completar el perfil del "
+                                    + "médico (HTTP " + response.code() + ")");
+                        }
+                        callback.onRolConFicha(UserRole.DOCTOR, ficha.getId(), ficha);
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<FirestoreApi.FirestoreDocument> call,
+                                          @NonNull Throwable t) {
+                        android.util.Log.w(TAG, "Sin conexión al completar el perfil del médico");
+                        callback.onRolConFicha(UserRole.DOCTOR, ficha.getId(), ficha);
+                    }
+                });
+    }
+
+    /**
+     * Deja constancia del perfil en {@code /users/{uid}} si aún no existe.
+     * <p>
+     * <b>Por qué hacía falta.</b> El documento de rol no lo escribía nadie: la ruta
+     * {@code administrators} sólo existía en el camino del administrador. Y sin ese
+     * documento pasan dos cosas graves:
+     * <ul>
+     *   <li>{@code miRol()} devuelve {@code ''}, así que un administrador que ya tiene
+     *       su documento con {@code role: "admin"} nunca era reconocido… pero peor: las
+     *       cuentas nuevas se quedaban sin perfil y dependían del respaldo local.</li>
+     *   <li>Las reglas de {@code appointments} necesitan {@code miDoctorId()} del
+     *       perfil: sin documento, la consulta de la agenda recibe <b>403</b> y el
+     *       médico ve «sin conexión».</li>
+     * </ul>
+     * <p>
+     * <b>Cómo se escribe sin pisar nada.</b> Se usa {@code PATCH} con
+     * {@code updateMask} de sólo {@code role}/{@code email}/{@code fullName}/
+     * {@code createdAt}. Si el documento ya existe con {@code role: "admin"} o
+     * {@code "doctor"}, el {@code role} enviado es {@code "patient"}… por eso sólo se
+     * llama cuando se sabe que no hay perfil (ver {@link #cargarRol}), o con el rol
+     * real ya resuelto.
+     *
+     * @param rol rol real ya resuelto (no se inventa: lo decide la ficha o el admin)
+     */
+    public void asegurarPerfil(@NonNull String uid, @NonNull String email,
+                               @Nullable String fullName, @NonNull UserRole rol,
+                               @Nullable String doctorId,
+                               @NonNull final RoleCallback callback) {
+        Map<String, FirestoreApi.Value> f = new HashMap<>();
+        f.put("role", FirestoreApi.ofString(rol.getValue()));
+        f.put("email", FirestoreApi.ofString(email));
+        f.put("fullName", FirestoreApi.ofString(fullName != null ? fullName : ""));
+        f.put("createdAt", FirestoreApi.ofInteger(System.currentTimeMillis()));
+        if (doctorId != null && !doctorId.trim().isEmpty()) {
+            f.put("doctorId", FirestoreApi.ofString(doctorId));
+        }
+
+        FirestoreApi.FirestoreDocument doc = new FirestoreApi.FirestoreDocument();
+        doc.fields = f;
+
+        // PATCH con máscara: crea el documento si no existe y no pisa campos ajenos.
+        api.updateDocument(COLLECTION_USERS, uid,
+                        new java.util.ArrayList<>(f.keySet()), doc)
+                .enqueue(new retrofit2.Callback<FirestoreApi.FirestoreDocument>() {
+                    @Override
+                    public void onResponse(
+                            @NonNull Call<FirestoreApi.FirestoreDocument> call,
+                            @NonNull Response<FirestoreApi.FirestoreDocument> response) {
+                        if (response.isSuccessful() || response.code() == 403) {
+                            // 403 aquí no invalida nada: el rol ya se resolvió leyendo
+                            // la ficha, y esa lectura es la que autoriza la agenda.
+                            callback.onRole(rol, doctorId);
                         } else {
-                            callback.onFallback("No se pudo crear el rol: HTTP "
+                            callback.onFallback("No se pudo guardar el perfil: HTTP "
                                     + response.code());
                         }
                     }
@@ -304,7 +458,8 @@ public class FirestoreUserRepository {
                     @Override
                     public void onFailure(@NonNull Call<FirestoreApi.FirestoreDocument> call,
                                           @NonNull Throwable t) {
-                        callback.onFallback("Sin conexión al crear el rol: " + t.getMessage());
+                        callback.onFallback("Sin conexión al guardar el perfil: "
+                                + t.getMessage());
                     }
                 });
     }

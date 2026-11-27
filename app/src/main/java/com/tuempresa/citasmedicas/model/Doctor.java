@@ -39,6 +39,17 @@ public class Doctor implements Serializable {
      */
     private String userId;
 
+    /**
+     * Teléfono de contacto del consultorio.
+     * <p>
+     * <b>Quién lo escribe y por qué.</b> El administrador da de alta la ficha con los
+     * datos mínimos (nombre, correo, especialidad); el teléfono lo completa el propio
+     * médico cuando entra por primera vez, porque nadie mejor que él lo sabe y porque
+     * el alta no debe obligar al administrador a inventarlo. Antes el perfil del médico
+     * mostraba «teléfono vacío» para siempre: este campo es lo que lo rellena.
+     */
+    private String phone;
+
     public Doctor() {
     }
 
@@ -91,6 +102,25 @@ public class Doctor implements Serializable {
     /** uid de Firebase una vez vinculado (vacío si la invitación sigue pendiente). */
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
+
+    /** Teléfono de contacto del médico (lo completa él mismo al entrar por primera vez). */
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+
+    /**
+     * ¿Al administrador le falta algún dato que sólo el médico puede aportar?
+     * <p>
+     * Se usa para decidir si hay que mostrarle el formulario de «completar ficha» al
+     * entrar. Sólo se exige el teléfono: la reseña ({@code bio}) es opcional por
+     * diseño, y pedirla en cada inicio de sesión sería molesto.
+     */
+    public boolean necesitaCompletarDatos() {
+        return isBlank(phone);
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
 
     /** ¿La ficha ya está vinculada a una cuenta concreta? */
     public boolean isLinked() {

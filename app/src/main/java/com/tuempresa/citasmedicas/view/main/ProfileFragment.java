@@ -137,9 +137,22 @@ public class ProfileFragment extends Fragment {
      * fallo de red no deja la pantalla en blanco. El documento usa como id el id de
      * Firebase del usuario, de modo que cada paciente tiene un único expediente y
      * volver a iniciar sesión no crea duplicados.
+     * <p>
+     * <b>Un médico NO sincroniza expediente.</b> Antes sí lo hacía, y como el formulario
+     * de registro no pide teléfono, grupo sanguíneo ni alergias cuando eliges «Médico»,
+     * esas escrituras dejaban un documento de paciente vacío con la misma identidad.
+     * Además el perfil del médico debe mostrar los datos de su ficha de {@code doctors}
+     * (edad 35, especialidad, hospital), no un expediente clínico que nunca rellenó.
      */
     private void sincronizarExpedienteConFirestore() {
         if (currentUser == null) {
+            return;
+        }
+        // Sólo los pacientes tienen expediente clínico.
+        if (currentUser.getRole() != null && currentUser.getRole().isDoctor()) {
+            return;
+        }
+        if (currentUser.getRole() != null && currentUser.getRole().isAdmin()) {
             return;
         }
         String userId = currentUser.getId();
